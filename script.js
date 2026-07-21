@@ -7,19 +7,13 @@
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySYWfz3_iIjoGyQylUkTS0MTKKxI2XSXW1KPUkxqv7cfYH_v1aWAs-PY2LLH9hX9bF/exec";
 
 /* =====================================================
-   DANH SÁCH QUÁN ĂN - MỖI QUÁN 1 MÃ RIÊNG DÙNG TRONG LINK QR
-   Mỗi khi thêm quán mới, thêm 1 dòng vào đây với mã ngắn gọn,
-   không dấu, không khoảng trắng (dùng làm giá trị ?location=...)
-   Xem hướng dẫn tạo link/QR cho từng quán trong README.md, Phần 5.
+   DANH SÁCH QUÁN ĂN - LẤY TỰ ĐỘNG TỪ GOOGLE SHEET (tab "DiaDiem")
+   Không cần sửa code khi thêm/đổi quán nữa - chỉ cần sửa trong Sheet.
+   Xem hướng dẫn trong README.md, Phần 5.
    ===================================================== */
-const LOCATION_MAP = {
-  quan_1: "Quán Cơm Nụ Cười - Quận 1",
-  quan_2: "Quán Cơm Nụ Cười - Quận 3",
-  quan_3: "Quán Cơm Nụ Cười - Quận 4",
-  quan_4: "Quán Cơm Nụ Cười - Quận 5",
-  quan_5: "Quán Cơm Nụ Cười - Quận Bình Thạnh",
-};
+let LOCATION_MAP = {}; // sẽ được nạp từ Google Sheet lúc trang tải lên
 
+const LOADING_LOCATION_TEXT = "Đang tải thông tin quán ăn...";
 const UNKNOWN_LOCATION_TEXT = "Chưa xác định điểm phát đồ ăn";
 
 /* ===================================================== */
@@ -38,10 +32,26 @@ const locationDisplay = document.getElementById("locationDisplay");
 
 const fields = {
   fullName: document.getElementById("fullName"),
-  birthDate: document.getElementById("birthDate"),
   phone: document.getElementById("phone"),
   location: document.getElementById("location"), // ô ẩn (hidden) chứa giá trị thật
 };
+
+/* ---------- TẢI DANH SÁCH QUÁN ĂN TỪ GOOGLE SHEET ---------- */
+
+async function loadLocationMap() {
+  try {
+    const response = await fetch(GOOGLE_SCRIPT_URL);
+    const result = await response.json();
+    const map = {};
+    (result.locations || []).forEach((item) => {
+      if (item.code) map[item.code] = item.name;
+    });
+    LOCATION_MAP = map;
+  } catch (err) {
+    console.error("Không tải được danh sách quán ăn:", err);
+    LOCATION_MAP = {};
+  }
+}
 
 /* ---------- ĐỌC QUÁN ĂN TỪ THAM SỐ TRÊN URL (MÃ QR) ---------- */
 
@@ -54,7 +64,7 @@ function resolveLocationFromURL() {
   return null; // không có tham số, hoặc mã không tồn tại trong LOCATION_MAP
 }
 
-function initLocationField() {
+function applyLocationToForm() {
   const resolvedName = resolveLocationFromURL();
 
   if (resolvedName) {
@@ -69,6 +79,17 @@ function initLocationField() {
     document.getElementById("locationError").textContent =
       "Vui lòng nhờ tình nguyện viên quét lại mã QR tại quầy phát đồ ăn.";
   }
+}
+
+// Chạy 1 lần lúc trang vừa tải: hiện chữ "Đang tải...", gọi Google Sheet, rồi mới điền quán ăn
+async function initLocationField() {
+  locationDisplay.value = LOADING_LOCATION_TEXT;
+  submitBtn.disabled = true;
+
+  await loadLocationMap();
+
+  submitBtn.disabled = false;
+  applyLocationToForm();
 }
 
 initLocationField();
@@ -88,7 +109,7 @@ function clearFieldError(field) {
 }
 
 function clearAllErrors() {
-  [fields.fullName, fields.birthDate, fields.phone].forEach(clearFieldError);
+  [fields.fullName, fields.phone].forEach(clearFieldError);
 }
 
 function validateForm() {
@@ -100,20 +121,6 @@ function validateForm() {
   if (nameValue.length < 2) {
     showFieldError(fields.fullName, "Vui lòng nhập họ và tên đầy đủ.");
     isValid = false;
-  }
-
-  // Ngày sinh: bắt buộc, phải là ngày trong quá khứ
-  const birthValue = fields.birthDate.value;
-  if (!birthValue) {
-    showFieldError(fields.birthDate, "Vui lòng chọn ngày sinh.");
-    isValid = false;
-  } else {
-    const birthDate = new Date(birthValue);
-    const today = new Date();
-    if (birthDate > today) {
-      showFieldError(fields.birthDate, "Ngày sinh không hợp lệ.");
-      isValid = false;
-    }
   }
 
   // Số điện thoại Việt Nam: 10 số, bắt đầu bằng 0
@@ -187,7 +194,6 @@ form.addEventListener("submit", async (e) => {
 
   const data = {
     fullName: fields.fullName.value.trim(),
-    birthDate: fields.birthDate.value,
     phone: fields.phone.value.trim(),
     location: fields.location.value,
     submittedAt: new Date().toISOString(),
@@ -199,7 +205,7 @@ form.addEventListener("submit", async (e) => {
     await submitToGoogleSheets(data);
     showView("success");
     form.reset();
-    initLocationField(); // form.reset() xóa ô quán ăn -> điền lại từ URL cho lần đăng ký tiếp theo
+    applyLocationToForm(); // form.reset() xóa ô quán ăn -> điền lại (không cần tải lại Sheet)
   } catch (err) {
     console.error("Lỗi khi gửi form:", err);
     showView("error");
