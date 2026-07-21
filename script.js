@@ -68,12 +68,12 @@ function applyLocationToForm() {
   const resolvedName = resolveLocationFromURL();
 
   if (resolvedName) {
-    locationDisplay.value = resolvedName;
+    locationDisplay.textContent = resolvedName;
     fields.location.value = resolvedName;
     locationDisplay.classList.remove("invalid");
     document.getElementById("locationError").textContent = "";
   } else {
-    locationDisplay.value = UNKNOWN_LOCATION_TEXT;
+    locationDisplay.textContent = UNKNOWN_LOCATION_TEXT;
     fields.location.value = "";
     locationDisplay.classList.add("invalid");
     document.getElementById("locationError").textContent =
@@ -83,7 +83,7 @@ function applyLocationToForm() {
 
 // Chạy 1 lần lúc trang vừa tải: hiện chữ "Đang tải...", gọi Google Sheet, rồi mới điền quán ăn
 async function initLocationField() {
-  locationDisplay.value = LOADING_LOCATION_TEXT;
+  locationDisplay.textContent = LOADING_LOCATION_TEXT;
   submitBtn.disabled = true;
 
   await loadLocationMap();

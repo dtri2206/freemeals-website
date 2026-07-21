@@ -52,15 +52,14 @@
       </div>
 
       <div class="form-group">
-        <label for="locationDisplay">Quán Ăn Bạn Đang Đứng</label>
-        <input
-          type="text"
+        <label id="locationLabel">Quán Ăn Bạn Đang Đứng</label>
+        <div
           id="locationDisplay"
           class="location-display"
-          readonly
-          tabindex="-1"
-          aria-readonly="true"
-        />
+          role="text"
+          aria-labelledby="locationLabel"
+          aria-live="polite"
+        ></div>
         <!-- Giá trị thật sự được gửi đi nằm ở ô ẩn này, do script.js điền tự động -->
         <input type="hidden" id="location" name="location" />
         <span class="error-msg" id="locationError"></span>

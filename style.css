@@ -142,17 +142,20 @@ select.invalid {
   border-color: var(--color-error);
 }
 
-/* Ô "Quán ăn" tự động điền từ mã QR - chỉ đọc, không cho sửa */
+/* Ô "Quán ăn" tự động điền từ mã QR - chỉ để xem, không cho sửa.
+   Dùng <div> thay vì <input> vì input không bao giờ tự xuống dòng được. */
 .location-display {
+  width: 100%;
+  font-size: 1.15rem;
+  padding: 14px 12px;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
   background-color: var(--color-primary-light);
   color: var(--color-primary-dark);
   font-weight: 700;
-  cursor: default;
-}
-
-.location-display:focus {
-  box-shadow: none;
-  border-color: var(--color-border);
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .location-display.invalid {
