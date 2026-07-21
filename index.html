@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Đăng Ký Thẻ Thành Viên - Bữa Ăn Miễn Phí</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <img src="assets/logo.png" alt="Logo quỹ từ thiện" class="logo" onerror="this.style.display='none'" />
+      <h1>Đăng Ký Thẻ Thành Viên</h1>
+      <p class="header-sub">Chương trình Bữa Ăn Miễn Phí</p>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- FORM: hiển thị mặc định -->
+    <form id="registerForm" class="card" novalidate>
+
+      <p class="instruction">Vui lòng điền đầy đủ thông tin bên dưới. Tình nguyện viên sẽ gọi điện xác nhận trong vài ngày tới.</p>
+
+      <div class="form-group">
+        <label for="fullName">Họ và Tên <span class="required">*</span></label>
+        <input
+          type="text"
+          id="fullName"
+          name="fullName"
+          placeholder="Ví dụ: Nguyễn Văn A"
+          autocomplete="name"
+          required
+        />
+        <span class="error-msg" id="fullNameError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="birthDate">Ngày Tháng Năm Sinh <span class="required">*</span></label>
+        <input
+          type="date"
+          id="birthDate"
+          name="birthDate"
+          required
+        />
+        <span class="error-msg" id="birthDateError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Số Điện Thoại <span class="required">*</span></label>
+        <input
+          type="tel"
+          id="phone"
+          name="phone"
+          placeholder="Ví dụ: 0912345678"
+          inputmode="numeric"
+          autocomplete="tel"
+          maxlength="11"
+          required
+        />
+        <span class="error-msg" id="phoneError"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="locationDisplay">Quán Ăn Bạn Đang Đứng</label>
+        <input
+          type="text"
+          id="locationDisplay"
+          class="location-display"
+          readonly
+          tabindex="-1"
+          aria-readonly="true"
+        />
+        <!-- Giá trị thật sự được gửi đi nằm ở ô ẩn này, do script.js điền tự động -->
+        <input type="hidden" id="location" name="location" />
+        <span class="error-msg" id="locationError"></span>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn-submit">
+        <span id="submitBtnText">GỬI THÔNG TIN</span>
+      </button>
+
+    </form>
+
+    <!-- THÔNG BÁO THÀNH CÔNG: ẩn mặc định, hiện sau khi gửi -->
+    <div id="successMessage" class="card success-card" style="display: none;">
+      <div class="success-icon">&#10004;</div>
+      <h2>Cảm Ơn Bạn!</h2>
+      <p>Chúng tôi đã nhận được thông tin của bạn.</p>
+      <p>Tình nguyện viên sẽ <strong>gọi điện thoại</strong> cho bạn trong vài ngày tới để xác nhận.</p>
+      <p class="success-note">Vui lòng giữ điện thoại để nghe cuộc gọi.</p>
+      <button type="button" id="registerAgainBtn" class="btn-secondary">Đăng Ký Người Khác</button>
+    </div>
+
+    <!-- THÔNG BÁO LỖI: ẩn mặc định -->
+    <div id="errorMessage" class="card error-card" style="display: none;">
+      <div class="error-icon">&#33;</div>
+      <h2>Có Lỗi Xảy Ra</h2>
+      <p>Vui lòng kiểm tra kết nối mạng và thử lại.</p>
+      <button type="button" id="tryAgainBtn" class="btn-secondary">Thử Lại</button>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <p>Chương trình từ thiện Bữa Ăn Miễn Phí &copy; 2026</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
