@@ -174,7 +174,7 @@ const togglePasswordBtn = document.getElementById("togglePasswordBtn");
 togglePasswordBtn.addEventListener("click", () => {
   const isHidden = fields.staffPassword.type === "password";
   fields.staffPassword.type = isHidden ? "text" : "password";
-  togglePasswordBtn.textContent = isHidden ? "\u{1F648}" : "\u{1F441}"; // 🙈 : 👁
+  togglePasswordBtn.textContent = isHidden ? "\u{1F513}" : "\u{1F512}"; // 🔓 : 🔒
   togglePasswordBtn.setAttribute("aria-label", isHidden ? "Ẩn mật khẩu" : "Hiện mật khẩu");
   togglePasswordBtn.setAttribute("aria-pressed", isHidden ? "true" : "false");
 });
