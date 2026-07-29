@@ -11,7 +11,8 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySYWfz3_iIjo
    Không cần sửa code khi thêm/đổi quán nữa - chỉ cần sửa trong Sheet.
    Xem hướng dẫn trong README.md, Phần 5.
    ===================================================== */
-let LOCATION_MAP = {}; // sẽ được nạp từ Google Sheet lúc trang tải lên
+let LOCATION_MAP = {}; // { ma_quan: { name, password } } - sẽ được nạp từ Google Sheet lúc trang tải lên
+let currentLocationCode = null; // mã quán đang xử lý, đọc từ URL
 
 const LOADING_LOCATION_TEXT = "Đang tải thông tin quán ăn...";
 const UNKNOWN_LOCATION_TEXT = "Chưa xác định điểm phát đồ ăn";
@@ -34,6 +35,7 @@ const fields = {
   fullName: document.getElementById("fullName"),
   phone: document.getElementById("phone"),
   location: document.getElementById("location"), // ô ẩn (hidden) chứa giá trị thật
+  staffPassword: document.getElementById("staffPassword"),
 };
 
 /* ---------- TẢI DANH SÁCH QUÁN ĂN TỪ GOOGLE SHEET ---------- */
@@ -44,7 +46,9 @@ async function loadLocationMap() {
     const result = await response.json();
     const map = {};
     (result.locations || []).forEach((item) => {
-      if (item.code) map[item.code] = item.name;
+      if (item.code) {
+        map[item.code] = { name: item.name, password: item.password || "" };
+      }
     });
     LOCATION_MAP = map;
   } catch (err) {
@@ -59,17 +63,18 @@ function resolveLocationFromURL() {
   const params = new URLSearchParams(window.location.search);
   const code = params.get("location"); // ví dụ: "quan_1"
   if (code && LOCATION_MAP[code]) {
-    return LOCATION_MAP[code];
+    return code;
   }
   return null; // không có tham số, hoặc mã không tồn tại trong LOCATION_MAP
 }
 
 function applyLocationToForm() {
-  const resolvedName = resolveLocationFromURL();
+  currentLocationCode = resolveLocationFromURL();
 
-  if (resolvedName) {
-    locationDisplay.textContent = resolvedName;
-    fields.location.value = resolvedName;
+  if (currentLocationCode) {
+    const info = LOCATION_MAP[currentLocationCode];
+    locationDisplay.textContent = info.name;
+    fields.location.value = info.name;
     locationDisplay.classList.remove("invalid");
     document.getElementById("locationError").textContent = "";
   } else {
@@ -109,7 +114,7 @@ function clearFieldError(field) {
 }
 
 function clearAllErrors() {
-  [fields.fullName, fields.phone].forEach(clearFieldError);
+  [fields.fullName, fields.phone, fields.staffPassword].forEach(clearFieldError);
 }
 
 function validateForm() {
@@ -142,12 +147,36 @@ function validateForm() {
     document.getElementById("locationError").textContent = "";
   }
 
+  // Mật khẩu của quán: chủ quán phải tự nhập để xác nhận trước khi gửi
+  const passwordValue = fields.staffPassword.value;
+  const correctPassword = currentLocationCode && LOCATION_MAP[currentLocationCode]
+    ? LOCATION_MAP[currentLocationCode].password
+    : null;
+
+  if (!passwordValue) {
+    showFieldError(fields.staffPassword, "Chưa nhập mật khẩu.");
+    isValid = false;
+  } else if (!correctPassword || passwordValue !== correctPassword) {
+    showFieldError(fields.staffPassword, "Mật khẩu không đúng.");
+    isValid = false;
+  }
+
   return isValid;
 }
 
 // Chỉ cho phép nhập số vào ô điện thoại
 fields.phone.addEventListener("input", () => {
   fields.phone.value = fields.phone.value.replace(/\D/g, "");
+});
+
+// Nút con mắt: bật/tắt hiện chữ trong ô mật khẩu
+const togglePasswordBtn = document.getElementById("togglePasswordBtn");
+togglePasswordBtn.addEventListener("click", () => {
+  const isHidden = fields.staffPassword.type === "password";
+  fields.staffPassword.type = isHidden ? "text" : "password";
+  togglePasswordBtn.textContent = isHidden ? "\u{1F648}" : "\u{1F441}"; // 🙈 : 👁
+  togglePasswordBtn.setAttribute("aria-label", isHidden ? "Ẩn mật khẩu" : "Hiện mật khẩu");
+  togglePasswordBtn.setAttribute("aria-pressed", isHidden ? "true" : "false");
 });
 
 /* ---------- GỬI DỮ LIỆU LÊN GOOGLE SHEETS ---------- */
@@ -196,6 +225,8 @@ form.addEventListener("submit", async (e) => {
     fullName: fields.fullName.value.trim(),
     phone: fields.phone.value.trim(),
     location: fields.location.value,
+    locationCode: currentLocationCode,
+    password: fields.staffPassword.value,
     submittedAt: new Date().toISOString(),
   };
 

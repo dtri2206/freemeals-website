@@ -65,6 +65,29 @@
         <span class="error-msg" id="locationError"></span>
       </div>
 
+      <div class="form-group">
+        <label for="staffPassword">Mật Khẩu Của Quán <span class="required">*</span></label>
+        <p class="field-hint">Đưa máy cho chủ quán nhập mật khẩu để xác nhận</p>
+        <div class="password-field-wrapper">
+          <input
+            type="password"
+            id="staffPassword"
+            name="staffPassword"
+            placeholder="Chủ quán nhập mật khẩu tại đây"
+            autocomplete="off"
+            required
+          />
+          <button
+            type="button"
+            id="togglePasswordBtn"
+            class="password-toggle-btn"
+            aria-label="Hiện mật khẩu"
+            aria-pressed="false"
+          >&#128065;</button>
+        </div>
+        <span class="error-msg" id="staffPasswordError"></span>
+      </div>
+
       <button type="submit" id="submitBtn" class="btn-submit">
         <span id="submitBtnText">GỬI THÔNG TIN</span>
       </button>

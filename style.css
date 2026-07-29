@@ -107,9 +107,16 @@ label {
   color: var(--color-error);
 }
 
+.field-hint {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
 input[type="text"],
 input[type="tel"],
 input[type="date"],
+input[type="password"],
 select {
   width: 100%;
   font-size: 1.15rem;
@@ -120,6 +127,35 @@ select {
   color: var(--color-text);
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* Ô mật khẩu + nút con mắt để hiện/ẩn ký tự */
+.password-field-wrapper {
+  position: relative;
+}
+
+.password-field-wrapper input[type="password"],
+.password-field-wrapper input[type="text"] {
+  padding-right: 52px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.password-toggle-btn:active {
+  opacity: 1;
 }
 
 select {
