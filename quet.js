@@ -81,7 +81,8 @@ function showView(viewEl) {
 
 /* ---------- TẢI THÔNG TIN QUÁN LÚC MỞ TRANG ---------- */
 async function loadQuanInfo() {
-  const response = await fetchWithRetry(GOOGLE_SCRIPT_URL);
+  // Thêm "&_=..." để trình duyệt không lấy kết quả cũ từ cache
+  const response = await fetchWithRetry(GOOGLE_SCRIPT_URL + "?_=" + Date.now(), { cache: "no-store" });
   const result = await response.json();
   const found = (result.locations || []).find((loc) => loc.code === quanCode);
   if (!found) {
@@ -194,7 +195,10 @@ async function onScanSuccess(decodedText) {
 async function lookupMember(code) {
   scanError.textContent = "Đang tra cứu...";
   try {
-    const response = await fetchWithRetry(GOOGLE_SCRIPT_URL + "?action=member&code=" + encodeURIComponent(code));
+    // Thêm "&_=..." để trình duyệt không lấy kết quả cũ từ cache -
+    // nếu không, quét lại cùng 1 khách trong ngày sẽ luôn hiện lại số suất của lần tra cứu đầu tiên.
+    const url = GOOGLE_SCRIPT_URL + "?action=member&code=" + encodeURIComponent(code) + "&_=" + Date.now();
+    const response = await fetchWithRetry(url, { cache: "no-store" });
     const result = await response.json();
 
     if (result.result !== "success") {
