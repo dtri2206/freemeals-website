@@ -302,6 +302,89 @@ select.invalid {
   font-size: 1rem;
 }
 
+/* ============ TRANG QUÉT QR (quet.html) ============ */
+.scanner-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+  white-space: nowrap;
+}
+
+#qrReader {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+  gap: 12px;
+}
+
+.info-row:first-child {
+  padding-top: 0;
+}
+
+.info-label {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.info-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.portion-selector {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.portion-btn {
+  flex: 1;
+  padding: 20px 8px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  background-color: var(--color-white);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.portion-btn.selected {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.portion-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ============ FOOTER ============ */
 .footer {
   text-align: center;

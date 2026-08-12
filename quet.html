@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Quét Mã QR - Chủ Quán</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <img src="assets/logo.png" alt="Logo quỹ từ thiện" class="logo" onerror="this.style.display='none'" />
+      <h1>Quét Mã QR Khách Ăn</h1>
+      <p class="header-sub" id="quanNameHeader">Đang tải thông tin quán...</p>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- MÀN HÌNH ĐĂNG NHẬP: hiện khi chưa nhập mật khẩu trong phiên này -->
+    <div id="loginView" class="card" style="display: none;">
+      <p class="instruction">Nhập mật khẩu của quán để bắt đầu quét. Chỉ cần nhập 1 lần, những lần mở lại sau không cần nhập nữa.</p>
+
+      <div class="form-group">
+        <label for="loginPassword">Mật Khẩu Của Quán <span class="required">*</span></label>
+        <div class="password-field-wrapper">
+          <input type="password" id="loginPassword" autocomplete="off" placeholder="Nhập mật khẩu" />
+          <button type="button" id="toggleLoginPasswordBtn" class="password-toggle-btn" aria-label="Hiện mật khẩu">&#128274;</button>
+        </div>
+        <span class="error-msg" id="loginPasswordError"></span>
+      </div>
+
+      <button type="button" id="loginBtn" class="btn-submit">ĐĂNG NHẬP</button>
+    </div>
+
+    <!-- MÀN HÌNH QUÉT: sẵn sàng quét thẻ khách -->
+    <div id="scannerView" class="card" style="display: none;">
+      <div class="scanner-header-row">
+        <p class="instruction" style="margin-bottom: 0;">Sẵn sàng quét thẻ khách ăn</p>
+        <button type="button" id="logoutBtn" class="btn-link">Đăng xuất</button>
+      </div>
+
+      <div id="qrReader"></div>
+
+      <button type="button" id="startScanBtn" class="btn-submit">QUÉT MÃ QR</button>
+      <button type="button" id="cancelScanBtn" class="btn-secondary" style="display: none;">Hủy Quét</button>
+      <span class="error-msg" id="scanError"></span>
+    </div>
+
+    <!-- MÀN HÌNH XÁC NHẬN: sau khi quét thành công -->
+    <div id="memberConfirmView" class="card" style="display: none;">
+      <div class="info-row">
+        <span class="info-label">Ngày giờ</span>
+        <span class="info-value" id="confirmDateTime"></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Tên khách</span>
+        <span class="info-value" id="confirmMemberName"></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Quán ăn</span>
+        <span class="info-value" id="confirmQuanName"></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Còn lại hôm nay</span>
+        <span class="info-value" id="confirmRemaining"></span>
+      </div>
+
+      <p class="field-hint" style="margin-top: 20px;">Chọn số suất ăn:</p>
+      <div class="portion-selector">
+        <button type="button" class="portion-btn" id="portionBtn1" data-portions="1">1 SUẤT</button>
+        <button type="button" class="portion-btn" id="portionBtn2" data-portions="2">2 SUẤT</button>
+      </div>
+
+      <button type="button" id="confirmSubmitBtn" class="btn-submit" disabled>XÁC NHẬN NỘP</button>
+      <button type="button" id="confirmCancelBtn" class="btn-secondary">Hủy, Quét Lại</button>
+      <span class="error-msg" id="confirmError"></span>
+    </div>
+
+    <!-- KẾT QUẢ: thành công -->
+    <div id="resultSuccessView" class="card success-card" style="display: none;">
+      <div class="success-icon">&#10004;</div>
+      <h2>Đã Ghi Nhận!</h2>
+      <p id="resultSuccessText"></p>
+      <button type="button" id="scanAgainBtn" class="btn-secondary">Quét Tiếp</button>
+    </div>
+
+    <!-- KẾT QUẢ: lỗi -->
+    <div id="resultErrorView" class="card error-card" style="display: none;">
+      <div class="error-icon">&#33;</div>
+      <h2>Không Ghi Nhận Được</h2>
+      <p id="resultErrorText"></p>
+      <button type="button" id="tryAgainScanBtn" class="btn-secondary">Thử Lại</button>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <p>Chương trình từ thiện Bữa Ăn Miễn Phí &copy; 2026</p>
+  </footer>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="quet.js"></script>
+</body>
+</html>
