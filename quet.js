@@ -59,6 +59,18 @@ let currentMember = null; // { code, name, allowance, usedToday, remaining }
 let selectedPortions = null;
 let html5QrCode = null;
 
+/* ---------- GỌI MẠNG CÓ TỰ THỬ LẠI (mạng ở quán hay chập chờn) ---------- */
+async function fetchWithRetry(url, options, retries = 3, delayMs = 1500) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 /* ---------- CHUYỂN MÀN HÌNH ---------- */
 function showView(viewEl) {
   [loginView, scannerView, memberConfirmView, resultSuccessView, resultErrorView].forEach((v) => {
@@ -69,7 +81,7 @@ function showView(viewEl) {
 
 /* ---------- TẢI THÔNG TIN QUÁN LÚC MỞ TRANG ---------- */
 async function loadQuanInfo() {
-  const response = await fetch(GOOGLE_SCRIPT_URL);
+  const response = await fetchWithRetry(GOOGLE_SCRIPT_URL);
   const result = await response.json();
   const found = (result.locations || []).find((loc) => loc.code === quanCode);
   if (!found) {
@@ -182,7 +194,7 @@ async function onScanSuccess(decodedText) {
 async function lookupMember(code) {
   scanError.textContent = "Đang tra cứu...";
   try {
-    const response = await fetch(GOOGLE_SCRIPT_URL + "?action=member&code=" + encodeURIComponent(code));
+    const response = await fetchWithRetry(GOOGLE_SCRIPT_URL + "?action=member&code=" + encodeURIComponent(code));
     const result = await response.json();
 
     if (result.result !== "success") {
@@ -240,7 +252,7 @@ confirmSubmitBtn.addEventListener("click", async () => {
   confirmError.textContent = "";
 
   try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
+    const response = await fetchWithRetry(GOOGLE_SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
