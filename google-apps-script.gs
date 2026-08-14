@@ -91,33 +91,6 @@ function doGet(e) {
       return jsonResponse(getMemberInfo(e.parameter.code));
     }
 
-    if (action === "debug") {
-      var debugSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
-      var debugRows = debugSheet.getDataRange().getValues();
-      var tzDebug = Session.getScriptTimeZone();
-      var out = [];
-      for (var d = 1; d < debugRows.length; d++) {
-        var cell = debugRows[d][0];
-        out.push({
-          raw: String(cell),
-          type: typeof cell,
-          isDateObject: cell instanceof Date,
-          isDateLike: Object.prototype.toString.call(cell) === "[object Date]",
-          matchesToday: toDateSafe(cell)
-            ? Utilities.formatDate(toDateSafe(cell), tzDebug, "yyyy-MM-dd") === Utilities.formatDate(new Date(), tzDebug, "yyyy-MM-dd")
-            : false,
-          maKhach: debugRows[d][1],
-          soSuat: debugRows[d][5]
-        });
-      }
-      return jsonResponse({
-        result: "success",
-        scriptTimeZone: tzDebug,
-        todayComputed: Utilities.formatDate(new Date(), tzDebug, "yyyy-MM-dd"),
-        rows: out
-      });
-    }
-
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Quán Ăn");
     var rows = sheet.getDataRange().getValues();
     var locations = [];
