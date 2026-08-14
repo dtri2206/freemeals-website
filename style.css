@@ -1,10 +1,7 @@
-/* =====================================================
-   MÀU SẮC CHỦ ĐẠO: Xanh dương & Trắng
-   ===================================================== */
 :root {
-  --color-primary: #1565C0;      /* Xanh dương chính */
-  --color-primary-dark: #0D47A1; /* Xanh dương đậm (hover/active) */
-  --color-primary-light: #E3F2FD;/* Xanh dương nhạt (nền) */
+  --color-primary: #1565C0;
+  --color-primary-dark: #0D47A1;
+  --color-primary-light: #E3F2FD;
   --color-white: #FFFFFF;
   --color-text: #1A1A1A;
   --color-text-muted: #555555;
@@ -12,7 +9,7 @@
   --color-success: #2E7D32;
   --color-border: #CFD8DC;
   --radius: 14px;
-  --font-base: 18px; /* chữ to, dễ đọc cho người lớn tuổi */
+  --font-base: 18px;
 }
 
 * {
@@ -35,7 +32,6 @@ body {
   flex-direction: column;
 }
 
-/* ============ HEADER ============ */
 .header {
   background-color: var(--color-primary);
   color: var(--color-white);
@@ -66,7 +62,6 @@ body {
   opacity: 0.95;
 }
 
-/* ============ LAYOUT ============ */
 .container {
   flex: 1;
   width: 100%;
@@ -75,7 +70,6 @@ body {
   padding: 20px 16px 40px;
 }
 
-/* ============ CARD (FORM) ============ */
 .card {
   background-color: var(--color-white);
   border-radius: var(--radius);
@@ -90,7 +84,6 @@ body {
   text-align: center;
 }
 
-/* ============ FORM FIELDS ============ */
 .form-group {
   margin-bottom: 22px;
 }
@@ -129,7 +122,6 @@ select {
   appearance: none;
 }
 
-/* Ô mật khẩu + nút con mắt để hiện/ẩn ký tự */
 .password-field-wrapper {
   position: relative;
 }
@@ -178,8 +170,6 @@ select.invalid {
   border-color: var(--color-error);
 }
 
-/* Ô "Quán ăn" tự động điền từ mã QR - chỉ để xem, không cho sửa.
-   Dùng <div> thay vì <input> vì input không bao giờ tự xuống dòng được. */
 .location-display {
   width: 100%;
   font-size: 1.15rem;
@@ -208,7 +198,6 @@ select.invalid {
   min-height: 1.2em;
 }
 
-/* ============ BUTTONS ============ */
 .btn-submit {
   width: 100%;
   padding: 18px;
@@ -249,7 +238,6 @@ select.invalid {
   background-color: var(--color-primary-light);
 }
 
-/* ============ SUCCESS / ERROR CARDS ============ */
 .success-card,
 .error-card {
   text-align: center;
@@ -302,7 +290,6 @@ select.invalid {
   font-size: 1rem;
 }
 
-/* ============ TRANG XÁC NHẬN SUẤT ĂN (quet.html) ============ */
 .info-row {
   display: flex;
   justify-content: space-between;
@@ -358,7 +345,6 @@ select.invalid {
   cursor: not-allowed;
 }
 
-/* ============ FOOTER ============ */
 .footer {
   text-align: center;
   padding: 16px;
@@ -366,7 +352,6 @@ select.invalid {
   color: var(--color-text-muted);
 }
 
-/* ============ LOADING SPINNER ============ */
 .spinner {
   display: inline-block;
   width: 20px;
@@ -383,7 +368,6 @@ select.invalid {
   to { transform: rotate(360deg); }
 }
 
-/* ============ RESPONSIVE: màn hình lớn hơn ============ */
 @media (min-width: 600px) {
   html {
     font-size: 19px;

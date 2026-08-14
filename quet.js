@@ -1,19 +1,12 @@
 "use strict";
 
-/* =====================================================
-   CẤU HÌNH - PHẢI DÙNG ĐÚNG URL GIỐNG HỆT TRONG script.js
-   ===================================================== */
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySYWfz3_iIjoGyQylUkTS0MTKKxI2XSXW1KPUkxqv7cfYH_v1aWAs-PY2LLH9hX9bF/exec";
 
-// Chỉ để tự điền sẵn mật khẩu lần gõ gần nhất cho đỡ phải gõ lại - KHÔNG phải phiên đăng nhập,
-// chủ quán vẫn phải tự xác nhận (bấm nộp) ở mỗi lượt.
 const PASSWORD_STORAGE_KEY = "quet_last_password";
 
-/* ---------- ĐỌC MÃ KHÁCH TỪ URL (?kh=kh_0001) ---------- */
 const params = new URLSearchParams(window.location.search);
 const memberCode = params.get("kh");
 
-/* ---------- ELEMENTS ---------- */
 const memberConfirmView = document.getElementById("memberConfirmView");
 const loadErrorView = document.getElementById("loadErrorView");
 const loadErrorText = document.getElementById("loadErrorText");
@@ -35,10 +28,9 @@ const resultSuccessText = document.getElementById("resultSuccessText");
 const resultErrorText = document.getElementById("resultErrorText");
 const tryAgainBtn = document.getElementById("tryAgainBtn");
 
-let currentMember = null; // { code, name, allowance, usedToday, remaining }
+let currentMember = null;
 let selectedPortions = null;
 
-/* ---------- CHUYỂN MÀN HÌNH ---------- */
 function showView(viewEl) {
   [memberConfirmView, loadErrorView, resultSuccessView, resultErrorView].forEach((v) => {
     v.style.display = v === viewEl ? "block" : "none";
@@ -46,7 +38,6 @@ function showView(viewEl) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-/* ---------- GỌI MẠNG CÓ TỰ THỬ LẠI (mạng ở quán hay chập chờn) ---------- */
 async function fetchWithRetry(url, options, retries = 3, delayMs = 1500) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -58,7 +49,6 @@ async function fetchWithRetry(url, options, retries = 3, delayMs = 1500) {
   }
 }
 
-/* ---------- TẢI THÔNG TIN KHÁCH LÚC VỪA MỞ TRANG ---------- */
 async function init() {
   if (!memberCode) {
     loadErrorText.textContent = "Link này thiếu mã khách. Vui lòng nhờ khách đưa đúng thẻ QR để quét lại.";
@@ -67,7 +57,6 @@ async function init() {
   }
 
   try {
-    // Thêm "&_=..." để trình duyệt không lấy kết quả cũ từ cache
     const url = GOOGLE_SCRIPT_URL + "?action=member&code=" + encodeURIComponent(memberCode) + "&_=" + Date.now();
     const response = await fetchWithRetry(url, { cache: "no-store" });
     const result = await response.json();
@@ -89,7 +78,6 @@ async function init() {
 
 init();
 
-/* ---------- MÀN HÌNH XÁC NHẬN + CHỌN SUẤT ---------- */
 function showMemberConfirm() {
   confirmDateTime.textContent = new Date().toLocaleString("vi-VN");
   confirmMemberName.textContent = currentMember.name;
@@ -124,10 +112,9 @@ portionBtn2.addEventListener("click", () => selectPortions(2));
 togglePasswordBtn.addEventListener("click", () => {
   const isHidden = quanPasswordInput.type === "password";
   quanPasswordInput.type = isHidden ? "text" : "password";
-  togglePasswordBtn.textContent = isHidden ? "\u{1F513}" : "\u{1F512}"; // 🔓 : 🔒
+  togglePasswordBtn.textContent = isHidden ? "\u{1F513}" : "\u{1F512}";
 });
 
-/* ---------- NỘP THÔNG TIN LÊN GOOGLE SHEET ---------- */
 confirmSubmitBtn.addEventListener("click", async () => {
   passwordError.textContent = "";
 
@@ -161,7 +148,6 @@ confirmSubmitBtn.addEventListener("click", async () => {
         " tại quán " + result.locationName + ".";
       showView(resultSuccessView);
     } else {
-      // Lỗi mật khẩu/hạn mức - hiện ngay tại chỗ để chủ quán sửa và nộp lại, không cần tải lại trang
       passwordError.textContent = result.message || "Có lỗi xảy ra, vui lòng thử lại.";
       confirmSubmitBtn.disabled = false;
     }

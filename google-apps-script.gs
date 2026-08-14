@@ -1,58 +1,32 @@
-/**
- * FILE NÀY DÙNG ĐỂ DÁN VÀO GOOGLE APPS SCRIPT (script.google.com)
- * KHÔNG chạy file này trên máy tính của bạn — nó chỉ chạy trên Google Cloud.
- * Xem hướng dẫn chi tiết từng bước trong README.md.
- *
- * Cần đúng 4 tab (sheet con), tên phải chính xác từng chữ:
- *   - "Khách Ăn"    -> Giai đoạn 1: người đăng ký mới từ index.html (doPost ghi vào đây)
- *       A: Họ và Tên, B: SĐT, C: Quán ăn, D: Trạng thái, E: Thời gian
- *   - "Quán Ăn"   -> danh sách quán ăn
- *       A: Mã quán, B: Tên quán + Địa chỉ, C: Link QR (công thức), D: Mật khẩu, E: Giới hạn suất/ngày
- *   - "Thành Viên" -> Giai đoạn 2: khách đã được quỹ xác minh qua điện thoại
- *       A: Mã khách, B: Họ và tên, C: SĐT, D: Bữa/ngày được cấp, E: Link QR (công thức)
- *   - "Lịch Sử Ăn"  -> Giai đoạn 2: nhật ký từng lượt ăn (append-only, KHÔNG sửa tay)
- *       A: Thời gian, B: Mã khách, C: Tên khách, D: Mã quán, E: Tên quán, F: Số suất
- *
- * QUAN TRỌNG: Vào File → Project Settings (Cài đặt dự án) trong Apps Script,
- * kiểm tra "Time zone" đang để đúng "(GMT+07:00) Vietnam Time" — nếu sai múi giờ,
- * việc tính hạn mức "hôm nay" sẽ bị lệch giờ.
- */
-
 function jsonResponse(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/* ==================== DÙNG CHUNG CHO CẢ 2 GIAI ĐOẠN ==================== */
-
-// Tìm quán trong tab "Quán Ăn" theo mã quán
 function findLocationByCode(code) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Quán Ăn");
   var rows = sheet.getDataRange().getValues();
 
-  for (var i = 1; i < rows.length; i++) { // bỏ dòng 1 (tiêu đề)
+  for (var i = 1; i < rows.length; i++) {
     var rowCode = String(rows[i][0] || "").trim();
     if (rowCode && rowCode === code) {
       return {
         name: String(rows[i][1] || "").trim(),
-        password: String(rows[i][3] || "").trim(),      // cột D
-        dailyLimit: Number(rows[i][4]) || 0              // cột E, 0 = không giới hạn
+        password: String(rows[i][3] || "").trim(),
+        dailyLimit: Number(rows[i][4]) || 0
       };
     }
   }
   return null;
 }
 
-// Tìm quán trong tab "Quán Ăn" theo ĐÚNG mật khẩu (dùng cho quet.html - không còn nhận mã quán từ URL nữa,
-// nên phải suy ra quán nào đang nộp dựa vào mật khẩu họ gõ). QUAN TRỌNG: mật khẩu các quán phải khác nhau,
-// không được trùng - nếu trùng, hệ thống sẽ nhận nhầm quán vì chỉ so được với dòng khớp đầu tiên.
 function findLocationByPassword(password) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Quán Ăn");
   var rows = sheet.getDataRange().getValues();
 
   for (var i = 1; i < rows.length; i++) {
-    var rowPassword = String(rows[i][3] || "").trim(); // cột D
+    var rowPassword = String(rows[i][3] || "").trim();
     if (rowPassword && rowPassword === password) {
       return {
         code: String(rows[i][0] || "").trim(),
@@ -64,7 +38,6 @@ function findLocationByPassword(password) {
   return null;
 }
 
-// Tìm khách trong tab "Thành Viên" theo mã khách
 function findMemberByCode(code) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Thành Viên");
   var rows = sheet.getDataRange().getValues();
@@ -74,15 +47,13 @@ function findMemberByCode(code) {
     if (rowCode && rowCode === code) {
       return {
         name: String(rows[i][1] || "").trim(),
-        allowance: Number(rows[i][3]) || 0 // cột D: Bữa/ngày được cấp
+        allowance: Number(rows[i][3]) || 0
       };
     }
   }
   return null;
 }
 
-// Cộng tổng số suất đã ghi nhận HÔM NAY trong tab "Lịch Sử Ăn", theo 1 cột chỉ định
-// (dùng chung để tính cho cả khách và quán)
 function getTodaySum(matchColumnIndex, matchValue) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
   var rows = sheet.getDataRange().getValues();
@@ -95,13 +66,11 @@ function getTodaySum(matchColumnIndex, matchValue) {
     if (!(rowDate instanceof Date)) continue;
     if (Utilities.formatDate(rowDate, tz, "yyyy-MM-dd") !== todayStr) continue;
     if (String(rows[i][matchColumnIndex] || "").trim() === matchValue) {
-      sum += Number(rows[i][5]) || 0; // cột F: Số suất
+      sum += Number(rows[i][5]) || 0;
     }
   }
   return sum;
 }
-
-/* ==================== doGet ==================== */
 
 function doGet(e) {
   try {
@@ -111,8 +80,6 @@ function doGet(e) {
       return jsonResponse(getMemberInfo(e.parameter.code));
     }
 
-    // Mặc định: trả về danh sách quán ăn - dùng cho cả index.html (Giai đoạn 1)
-    // và quet.html (Giai đoạn 2, để lấy tên quán + mật khẩu + hạn mức)
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Quán Ăn");
     var rows = sheet.getDataRange().getValues();
     var locations = [];
@@ -122,9 +89,7 @@ function doGet(e) {
       if (code) {
         locations.push({
           code: code,
-          name: String(rows[i][1] || "").trim(),
-          password: String(rows[i][3] || "").trim(),
-          dailyLimit: Number(rows[i][4]) || 0
+          name: String(rows[i][1] || "").trim()
         });
       }
     }
@@ -136,13 +101,12 @@ function doGet(e) {
   }
 }
 
-// Tra cứu 1 khách theo mã, kèm số suất đã dùng hôm nay - cho màn hình xác nhận ở quet.html
 function getMemberInfo(code) {
   var member = findMemberByCode(code);
   if (!member) {
     return { result: "error", message: "Khong tim thay ma khach nay." };
   }
-  var usedToday = getTodaySum(1, code); // cột B trong Lịch Sử Ăn = Mã khách
+  var usedToday = getTodaySum(1, code);
   return {
     result: "success",
     member: {
@@ -155,8 +119,6 @@ function getMemberInfo(code) {
   };
 }
 
-/* ==================== doPost ==================== */
-
 function doPost(e) {
   var data = JSON.parse(e.postData.contents);
 
@@ -166,7 +128,6 @@ function doPost(e) {
   return handleRegistration(data);
 }
 
-// Giai đoạn 1: người dùng tự đăng ký từ index.html
 function handleRegistration(data) {
   try {
     var location = findLocationByCode(data.locationCode);
@@ -193,9 +154,6 @@ function handleRegistration(data) {
   }
 }
 
-// Giai đoạn 2: khách đưa QR cho chủ quán quét bằng camera thường -> mở thẳng trang xác nhận.
-// Chủ quán chọn số suất, tự nhập mật khẩu quán mình -> ghi vào "Lịch Sử Ăn".
-// Lưu ý: không còn nhận "mã quán" từ URL nữa - quán được xác định DUY NHẤT qua mật khẩu.
 function handleCheckin(data) {
   var lock = LockService.getScriptLock();
   try {
@@ -234,7 +192,7 @@ function handleCheckin(data) {
     }
 
     if (location.dailyLimit > 0) {
-      var quanUsedToday = getTodaySum(3, location.code); // cột D trong Lịch Sử Ăn = Mã quán
+      var quanUsedToday = getTodaySum(3, location.code);
       if (quanUsedToday + portions > location.dailyLimit) {
         return jsonResponse({
           result: "error",

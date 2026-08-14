@@ -18,7 +18,6 @@
 
   <main class="container">
 
-    <!-- MÀN HÌNH XÁC NHẬN: hiện ngay khi mở trang (sau khi khách đưa QR cho chủ quán quét) -->
     <div id="memberConfirmView" class="card" style="display: none;">
       <div class="info-row">
         <span class="info-label">Ngày giờ</span>
@@ -52,21 +51,18 @@
       <button type="button" id="confirmSubmitBtn" class="btn-submit" disabled>XÁC NHẬN NỘP</button>
     </div>
 
-    <!-- LỖI KHI TẢI THÔNG TIN KHÁCH LÚC VỪA MỞ TRANG -->
     <div id="loadErrorView" class="card error-card" style="display: none;">
       <div class="error-icon">&#33;</div>
       <h2>Không Tìm Thấy Thông Tin</h2>
       <p id="loadErrorText"></p>
     </div>
 
-    <!-- KẾT QUẢ: thành công -->
     <div id="resultSuccessView" class="card success-card" style="display: none;">
       <div class="success-icon">&#10004;</div>
       <h2>Đã Ghi Nhận!</h2>
       <p id="resultSuccessText"></p>
     </div>
 
-    <!-- KẾT QUẢ: lỗi mạng (khác lỗi mật khẩu - lỗi mật khẩu hiện ngay tại chỗ, không sang màn hình này) -->
     <div id="resultErrorView" class="card error-card" style="display: none;">
       <div class="error-icon">&#33;</div>
       <h2>Không Ghi Nhận Được</h2>

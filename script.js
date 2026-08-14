@@ -1,23 +1,12 @@
 "use strict";
 
-/* =====================================================
-   CẤU HÌNH - THAY ĐỔI DÒNG NÀY SAU KHI TẠO GOOGLE APPS SCRIPT
-   Xem hướng dẫn trong README.md, Phần 3.
-   ===================================================== */
 const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySYWfz3_iIjoGyQylUkTS0MTKKxI2XSXW1KPUkxqv7cfYH_v1aWAs-PY2LLH9hX9bF/exec";
 
-/* =====================================================
-   DANH SÁCH QUÁN ĂN - LẤY TỰ ĐỘNG TỪ GOOGLE SHEET (tab "DiaDiem")
-   Không cần sửa code khi thêm/đổi quán nữa - chỉ cần sửa trong Sheet.
-   Xem hướng dẫn trong README.md, Phần 5.
-   ===================================================== */
-let LOCATION_MAP = {}; // { ma_quan: { name, password } } - sẽ được nạp từ Google Sheet lúc trang tải lên
-let currentLocationCode = null; // mã quán đang xử lý, đọc từ URL
+let LOCATION_MAP = {};
+let currentLocationCode = null;
 
 const LOADING_LOCATION_TEXT = "Đang tải thông tin quán ăn...";
 const UNKNOWN_LOCATION_TEXT = "Chưa xác định điểm phát đồ ăn";
-
-/* ===================================================== */
 
 const form = document.getElementById("registerForm");
 const submitBtn = document.getElementById("submitBtn");
@@ -34,11 +23,9 @@ const locationDisplay = document.getElementById("locationDisplay");
 const fields = {
   fullName: document.getElementById("fullName"),
   phone: document.getElementById("phone"),
-  location: document.getElementById("location"), // ô ẩn (hidden) chứa giá trị thật
+  location: document.getElementById("location"),
   staffPassword: document.getElementById("staffPassword"),
 };
-
-/* ---------- TẢI DANH SÁCH QUÁN ĂN TỪ GOOGLE SHEET ---------- */
 
 async function loadLocationMap() {
   try {
@@ -47,7 +34,7 @@ async function loadLocationMap() {
     const map = {};
     (result.locations || []).forEach((item) => {
       if (item.code) {
-        map[item.code] = { name: item.name, password: item.password || "" };
+        map[item.code] = { name: item.name };
       }
     });
     LOCATION_MAP = map;
@@ -57,15 +44,13 @@ async function loadLocationMap() {
   }
 }
 
-/* ---------- ĐỌC QUÁN ĂN TỪ THAM SỐ TRÊN URL (MÃ QR) ---------- */
-
 function resolveLocationFromURL() {
   const params = new URLSearchParams(window.location.search);
-  const code = params.get("location"); // ví dụ: "quan_1"
+  const code = params.get("location");
   if (code && LOCATION_MAP[code]) {
     return code;
   }
-  return null; // không có tham số, hoặc mã không tồn tại trong LOCATION_MAP
+  return null;
 }
 
 function applyLocationToForm() {
@@ -86,7 +71,6 @@ function applyLocationToForm() {
   }
 }
 
-// Chạy 1 lần lúc trang vừa tải: hiện chữ "Đang tải...", gọi Google Sheet, rồi mới điền quán ăn
 async function initLocationField() {
   locationDisplay.textContent = LOADING_LOCATION_TEXT;
   submitBtn.disabled = true;
@@ -98,8 +82,6 @@ async function initLocationField() {
 }
 
 initLocationField();
-
-/* ---------- KIỂM TRA DỮ LIỆU (VALIDATION) ---------- */
 
 function showFieldError(field, message) {
   field.classList.add("invalid");
@@ -121,14 +103,12 @@ function validateForm() {
   clearAllErrors();
   let isValid = true;
 
-  // Họ và tên: bắt buộc, ít nhất 2 ký tự
   const nameValue = fields.fullName.value.trim();
   if (nameValue.length < 2) {
     showFieldError(fields.fullName, "Vui lòng nhập họ và tên đầy đủ.");
     isValid = false;
   }
 
-  // Số điện thoại Việt Nam: 10 số, bắt đầu bằng 0
   const phoneValue = fields.phone.value.trim();
   const phoneRegex = /^0\d{9}$/;
   if (!phoneRegex.test(phoneValue)) {
@@ -136,7 +116,6 @@ function validateForm() {
     isValid = false;
   }
 
-  // Quán ăn: phải được xác định tự động từ mã QR, không cho gửi nếu chưa rõ
   if (!fields.location.value) {
     locationDisplay.classList.add("invalid");
     document.getElementById("locationError").textContent =
@@ -147,39 +126,26 @@ function validateForm() {
     document.getElementById("locationError").textContent = "";
   }
 
-  // Mật khẩu của quán: chủ quán phải tự nhập để xác nhận trước khi gửi
-  const passwordValue = fields.staffPassword.value;
-  const correctPassword = currentLocationCode && LOCATION_MAP[currentLocationCode]
-    ? LOCATION_MAP[currentLocationCode].password
-    : null;
-
-  if (!passwordValue) {
+  if (!fields.staffPassword.value) {
     showFieldError(fields.staffPassword, "Chưa nhập mật khẩu.");
-    isValid = false;
-  } else if (!correctPassword || passwordValue !== correctPassword) {
-    showFieldError(fields.staffPassword, "Mật khẩu không đúng.");
     isValid = false;
   }
 
   return isValid;
 }
 
-// Chỉ cho phép nhập số vào ô điện thoại
 fields.phone.addEventListener("input", () => {
   fields.phone.value = fields.phone.value.replace(/\D/g, "");
 });
 
-// Nút con mắt: bật/tắt hiện chữ trong ô mật khẩu
 const togglePasswordBtn = document.getElementById("togglePasswordBtn");
 togglePasswordBtn.addEventListener("click", () => {
   const isHidden = fields.staffPassword.type === "password";
   fields.staffPassword.type = isHidden ? "text" : "password";
-  togglePasswordBtn.textContent = isHidden ? "\u{1F513}" : "\u{1F512}"; // 🔓 : 🔒
+  togglePasswordBtn.textContent = isHidden ? "\u{1F513}" : "\u{1F512}";
   togglePasswordBtn.setAttribute("aria-label", isHidden ? "Ẩn mật khẩu" : "Hiện mật khẩu");
   togglePasswordBtn.setAttribute("aria-pressed", isHidden ? "true" : "false");
 });
-
-/* ---------- GỬI DỮ LIỆU LÊN GOOGLE SHEETS ---------- */
 
 function setLoading(isLoading) {
   submitBtn.disabled = isLoading;
@@ -196,16 +162,12 @@ function showView(view) {
 }
 
 async function submitToGoogleSheets(data) {
-  // Dùng Content-Type: text/plain và mode: no-cors để tránh lỗi CORS
-  // khi gọi Google Apps Script Web App từ trình duyệt.
-  await fetch(GOOGLE_SCRIPT_URL, {
+  const response = await fetch(GOOGLE_SCRIPT_URL, {
     method: "POST",
-    mode: "no-cors",
     headers: { "Content-Type": "text/plain" },
     body: JSON.stringify(data),
   });
-  // Lưu ý: với mode "no-cors", trình duyệt không cho đọc nội dung phản hồi.
-  // Nếu fetch không báo lỗi mạng, ta coi như đã gửi thành công.
+  return response.json();
 }
 
 form.addEventListener("submit", async (e) => {
@@ -233,10 +195,15 @@ form.addEventListener("submit", async (e) => {
   setLoading(true);
 
   try {
-    await submitToGoogleSheets(data);
-    showView("success");
-    form.reset();
-    applyLocationToForm(); // form.reset() xóa ô quán ăn -> điền lại (không cần tải lại Sheet)
+    const result = await submitToGoogleSheets(data);
+
+    if (result.result === "success") {
+      showView("success");
+      form.reset();
+      applyLocationToForm();
+    } else {
+      showFieldError(fields.staffPassword, result.message || "Có lỗi xảy ra, vui lòng thử lại.");
+    }
   } catch (err) {
     console.error("Lỗi khi gửi form:", err);
     showView("error");
