@@ -44,6 +44,26 @@ function findLocationByCode(code) {
   return null;
 }
 
+// Tìm quán trong tab "Quán Ăn" theo ĐÚNG mật khẩu (dùng cho quet.html - không còn nhận mã quán từ URL nữa,
+// nên phải suy ra quán nào đang nộp dựa vào mật khẩu họ gõ). QUAN TRỌNG: mật khẩu các quán phải khác nhau,
+// không được trùng - nếu trùng, hệ thống sẽ nhận nhầm quán vì chỉ so được với dòng khớp đầu tiên.
+function findLocationByPassword(password) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Quán Ăn");
+  var rows = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < rows.length; i++) {
+    var rowPassword = String(rows[i][3] || "").trim(); // cột D
+    if (rowPassword && rowPassword === password) {
+      return {
+        code: String(rows[i][0] || "").trim(),
+        name: String(rows[i][1] || "").trim(),
+        dailyLimit: Number(rows[i][4]) || 0
+      };
+    }
+  }
+  return null;
+}
+
 // Tìm khách trong tab "Thành Viên" theo mã khách
 function findMemberByCode(code) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Thành Viên");
@@ -173,7 +193,9 @@ function handleRegistration(data) {
   }
 }
 
-// Giai đoạn 2: chủ quán quét QR khách, chọn số suất, xác nhận -> ghi vào "Lịch Sử Ăn"
+// Giai đoạn 2: khách đưa QR cho chủ quán quét bằng camera thường -> mở thẳng trang xác nhận.
+// Chủ quán chọn số suất, tự nhập mật khẩu quán mình -> ghi vào "Lịch Sử Ăn".
+// Lưu ý: không còn nhận "mã quán" từ URL nữa - quán được xác định DUY NHẤT qua mật khẩu.
 function handleCheckin(data) {
   var lock = LockService.getScriptLock();
   try {
@@ -183,12 +205,13 @@ function handleCheckin(data) {
   }
 
   try {
-    var location = findLocationByCode(data.locationCode);
-    if (!location) {
-      return jsonResponse({ result: "error", message: "Khong tim thay quan an." });
+    if (!data.password) {
+      return jsonResponse({ result: "error", message: "Chua nhap mat khau." });
     }
-    if (!data.locationPassword || data.locationPassword !== location.password) {
-      return jsonResponse({ result: "error", message: "Mat khau quan khong dung." });
+
+    var location = findLocationByPassword(data.password);
+    if (!location) {
+      return jsonResponse({ result: "error", message: "Mat khau khong dung." });
     }
 
     var member = findMemberByCode(data.memberCode);
@@ -211,7 +234,7 @@ function handleCheckin(data) {
     }
 
     if (location.dailyLimit > 0) {
-      var quanUsedToday = getTodaySum(3, data.locationCode); // cột D trong Lịch Sử Ăn = Mã quán
+      var quanUsedToday = getTodaySum(3, location.code); // cột D trong Lịch Sử Ăn = Mã quán
       if (quanUsedToday + portions > location.dailyLimit) {
         return jsonResponse({
           result: "error",
@@ -226,7 +249,7 @@ function handleCheckin(data) {
       new Date(),
       data.memberCode,
       member.name,
-      data.locationCode,
+      location.code,
       location.name,
       portions
     ]);
@@ -234,6 +257,7 @@ function handleCheckin(data) {
     return jsonResponse({
       result: "success",
       memberName: member.name,
+      locationName: location.name,
       memberRemaining: member.allowance - (memberUsedToday + portions)
     });
 

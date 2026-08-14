@@ -302,34 +302,7 @@ select.invalid {
   font-size: 1rem;
 }
 
-/* ============ TRANG QUÉT QR (quet.html) ============ */
-.scanner-header-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  gap: 12px;
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: var(--color-primary);
-  font-size: 1rem;
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 4px;
-  white-space: nowrap;
-}
-
-#qrReader {
-  width: 100%;
-  border-radius: 10px;
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-
+/* ============ TRANG XÁC NHẬN SUẤT ĂN (quet.html) ============ */
 .info-row {
   display: flex;
   justify-content: space-between;
