@@ -55,7 +55,9 @@ function findMemberByCode(code) {
 }
 
 function toDateSafe(value) {
-  if (value instanceof Date) return value;
+  if (Object.prototype.toString.call(value) === "[object Date]" && !isNaN(value.getTime())) {
+    return value;
+  }
   if (typeof value === "string" && value) {
     var parsed = new Date(value);
     if (!isNaN(parsed.getTime())) return parsed;
@@ -100,6 +102,10 @@ function doGet(e) {
           raw: String(cell),
           type: typeof cell,
           isDateObject: cell instanceof Date,
+          isDateLike: Object.prototype.toString.call(cell) === "[object Date]",
+          matchesToday: toDateSafe(cell)
+            ? Utilities.formatDate(toDateSafe(cell), tzDebug, "yyyy-MM-dd") === Utilities.formatDate(new Date(), tzDebug, "yyyy-MM-dd")
+            : false,
           maKhach: debugRows[d][1],
           soSuat: debugRows[d][5]
         });
