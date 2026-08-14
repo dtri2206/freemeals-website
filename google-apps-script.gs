@@ -54,6 +54,15 @@ function findMemberByCode(code) {
   return null;
 }
 
+function toDateSafe(value) {
+  if (value instanceof Date) return value;
+  if (typeof value === "string" && value) {
+    var parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return null;
+}
+
 function getTodaySum(matchColumnIndex, matchValue) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
   var rows = sheet.getDataRange().getValues();
@@ -62,10 +71,10 @@ function getTodaySum(matchColumnIndex, matchValue) {
   var sum = 0;
 
   for (var i = 1; i < rows.length; i++) {
-    var rowDate = rows[i][0];
-    if (!(rowDate instanceof Date)) continue;
+    var rowDate = toDateSafe(rows[i][0]);
+    if (!rowDate) continue;
     if (Utilities.formatDate(rowDate, tz, "yyyy-MM-dd") !== todayStr) continue;
-    if (String(rows[i][matchColumnIndex] || "").trim() === matchValue) {
+    if (String(rows[i][matchColumnIndex] || "").trim() === String(matchValue).trim()) {
       sum += Number(rows[i][5]) || 0;
     }
   }
@@ -78,6 +87,29 @@ function doGet(e) {
 
     if (action === "member") {
       return jsonResponse(getMemberInfo(e.parameter.code));
+    }
+
+    if (action === "debug") {
+      var debugSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
+      var debugRows = debugSheet.getDataRange().getValues();
+      var tzDebug = Session.getScriptTimeZone();
+      var out = [];
+      for (var d = 1; d < debugRows.length; d++) {
+        var cell = debugRows[d][0];
+        out.push({
+          raw: String(cell),
+          type: typeof cell,
+          isDateObject: cell instanceof Date,
+          maKhach: debugRows[d][1],
+          soSuat: debugRows[d][5]
+        });
+      }
+      return jsonResponse({
+        result: "success",
+        scriptTimeZone: tzDebug,
+        todayComputed: Utilities.formatDate(new Date(), tzDebug, "yyyy-MM-dd"),
+        rows: out
+      });
     }
 
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Quán Ăn");
