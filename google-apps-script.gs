@@ -258,3 +258,64 @@ function handleCheckin(data) {
     lock.releaseLock();
   }
 }
+
+function archiveAndResetMonthlyLog() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var liveSheet = ss.getSheetByName("Lịch Sử Ăn");
+  var allData = liveSheet.getDataRange().getValues();
+
+  if (allData.length <= 1) {
+    return "Khong co du lieu de luu tru.";
+  }
+
+  var header = allData[0];
+  var dataRows = allData.slice(1);
+  var tz = Session.getScriptTimeZone();
+  var groupedByMonth = {};
+
+  for (var i = 0; i < dataRows.length; i++) {
+    var row = dataRows[i];
+    var rowDate = toDateSafe(row[0]);
+    var monthKey = rowDate ? Utilities.formatDate(rowDate, tz, "yyyy-MM") : "KhongXacDinhNgay";
+    if (!groupedByMonth[monthKey]) groupedByMonth[monthKey] = [];
+    groupedByMonth[monthKey].push(row);
+  }
+
+  for (var monthKey in groupedByMonth) {
+    var archiveSheetName = "LuuTru_" + monthKey;
+    var archiveSheet = ss.getSheetByName(archiveSheetName);
+    if (!archiveSheet) {
+      archiveSheet = ss.insertSheet(archiveSheetName);
+      archiveSheet.appendRow(header);
+    }
+    var rowsToArchive = groupedByMonth[monthKey];
+    archiveSheet
+      .getRange(archiveSheet.getLastRow() + 1, 1, rowsToArchive.length, header.length)
+      .setValues(rowsToArchive);
+  }
+
+  if (liveSheet.getLastRow() > 1) {
+    liveSheet
+      .getRange(2, 1, liveSheet.getLastRow() - 1, liveSheet.getLastColumn())
+      .clearContent();
+  }
+
+  return "Da luu tru " + dataRows.length + " dong vao " + Object.keys(groupedByMonth).length + " thang.";
+}
+
+function setupMonthlyArchiveTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "archiveAndResetMonthlyLog") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  ScriptApp.newTrigger("archiveAndResetMonthlyLog")
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(0)
+    .create();
+
+  return "Da cai lich tu dong chay vao ngay 1 hang thang.";
+}
