@@ -27,9 +27,21 @@ const fields = {
   staffPassword: document.getElementById("staffPassword"),
 };
 
+async function fetchWithRetry(url, options, retries = 3, delayMs = 1500) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 async function loadLocationMap() {
   try {
-    const response = await fetch(GOOGLE_SCRIPT_URL);
+    const url = GOOGLE_SCRIPT_URL + "?_=" + Date.now();
+    const response = await fetchWithRetry(url, { cache: "no-store" });
     const result = await response.json();
     const map = {};
     (result.locations || []).forEach((item) => {
@@ -162,7 +174,7 @@ function showView(view) {
 }
 
 async function submitToGoogleSheets(data) {
-  const response = await fetch(GOOGLE_SCRIPT_URL, {
+  const response = await fetchWithRetry(GOOGLE_SCRIPT_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain" },
     body: JSON.stringify(data),
