@@ -16,8 +16,6 @@ const resultErrorView = document.getElementById("resultErrorView");
 const confirmDateTime = document.getElementById("confirmDateTime");
 const confirmMemberName = document.getElementById("confirmMemberName");
 const confirmRemaining = document.getElementById("confirmRemaining");
-const portionBtn1 = document.getElementById("portionBtn1");
-const portionBtn2 = document.getElementById("portionBtn2");
 
 const quanPasswordInput = document.getElementById("quanPassword");
 const togglePasswordBtn = document.getElementById("togglePasswordBtn");
@@ -29,7 +27,6 @@ const resultErrorText = document.getElementById("resultErrorText");
 const tryAgainBtn = document.getElementById("tryAgainBtn");
 
 let currentMember = null;
-let selectedPortions = null;
 
 function showView(viewEl) {
   [memberConfirmView, loadErrorView, resultSuccessView, resultErrorView].forEach((v) => {
@@ -83,13 +80,14 @@ function showMemberConfirm() {
   confirmMemberName.textContent = currentMember.name;
   confirmRemaining.textContent = currentMember.remaining + " suất";
 
-  selectedPortions = null;
-  portionBtn1.classList.remove("selected");
-  portionBtn2.classList.remove("selected");
-  portionBtn1.disabled = currentMember.remaining < 1;
-  portionBtn2.disabled = currentMember.remaining < 2;
-  confirmSubmitBtn.disabled = true;
   passwordError.textContent = "";
+
+  if (currentMember.remaining < 1) {
+    confirmSubmitBtn.disabled = true;
+    passwordError.textContent = "Khách đã dùng hết suất ăn tháng này.";
+  } else {
+    confirmSubmitBtn.disabled = false;
+  }
 
   const savedPassword = localStorage.getItem(PASSWORD_STORAGE_KEY);
   if (savedPassword) {
@@ -99,16 +97,6 @@ function showMemberConfirm() {
   showView(memberConfirmView);
 }
 
-function selectPortions(n) {
-  selectedPortions = n;
-  portionBtn1.classList.toggle("selected", n === 1);
-  portionBtn2.classList.toggle("selected", n === 2);
-  confirmSubmitBtn.disabled = false;
-}
-
-portionBtn1.addEventListener("click", () => selectPortions(1));
-portionBtn2.addEventListener("click", () => selectPortions(2));
-
 togglePasswordBtn.addEventListener("click", () => {
   const isHidden = quanPasswordInput.type === "password";
   quanPasswordInput.type = isHidden ? "text" : "password";
@@ -117,8 +105,6 @@ togglePasswordBtn.addEventListener("click", () => {
 
 confirmSubmitBtn.addEventListener("click", async () => {
   passwordError.textContent = "";
-
-  if (!selectedPortions) return;
 
   const password = quanPasswordInput.value;
   if (!password) {
@@ -135,7 +121,7 @@ confirmSubmitBtn.addEventListener("click", async () => {
       body: JSON.stringify({
         action: "checkin",
         memberCode: currentMember.code,
-        portions: selectedPortions,
+        portions: 1,
         password: password,
       }),
     });
@@ -144,7 +130,7 @@ confirmSubmitBtn.addEventListener("click", async () => {
     if (result.result === "success") {
       localStorage.setItem(PASSWORD_STORAGE_KEY, password);
       resultSuccessText.textContent =
-        "Đã ghi nhận " + selectedPortions + " suất ăn cho khách hàng " + result.memberName +
+        "Đã ghi nhận 1 suất ăn cho khách hàng " + result.memberName +
         " tại quán " + result.locationName + ".";
       showView(resultSuccessView);
     } else {

@@ -316,35 +316,6 @@ select.invalid {
   text-align: right;
 }
 
-.portion-selector {
-  display: flex;
-  gap: 12px;
-  margin: 16px 0 24px;
-}
-
-.portion-btn {
-  flex: 1;
-  padding: 20px 8px;
-  font-size: 1.3rem;
-  font-weight: 700;
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  background-color: var(--color-white);
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.portion-btn.selected {
-  border-color: var(--color-primary);
-  background-color: var(--color-primary-light);
-  color: var(--color-primary-dark);
-}
-
-.portion-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 .footer {
   text-align: center;
   padding: 16px;
