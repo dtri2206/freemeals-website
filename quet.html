@@ -19,18 +19,13 @@
   <main class="container">
 
     <div id="memberConfirmView" class="card" style="display: none;">
-      <div class="info-row">
-        <span class="info-label">Ngày giờ</span>
-        <span class="info-value" id="confirmDateTime"></span>
+      <div class="remaining-hero" id="remainingHero">
+        <span class="remaining-hero-label">CÒN LẠI</span>
+        <span class="remaining-hero-number" id="confirmRemaining">0</span>
+        <span class="remaining-hero-label">SUẤT</span>
       </div>
-      <div class="info-row">
-        <span class="info-label">Tên khách</span>
-        <span class="info-value" id="confirmMemberName"></span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Còn lại tháng này</span>
-        <span class="info-value" id="confirmRemaining"></span>
-      </div>
+
+      <button type="button" id="viewHistoryBtn" class="btn-secondary">XEM LỊCH SỬ ĂN</button>
 
       <div class="form-group" style="margin-top: 24px;">
         <label for="quanPassword">Mật Khẩu Quán Ăn <span class="required">*</span></label>
@@ -43,6 +38,13 @@
       </div>
 
       <button type="button" id="confirmSubmitBtn" class="btn-submit" disabled>XÁC NHẬN NỘP</button>
+    </div>
+
+    <div id="historyView" class="card" style="display: none;">
+      <h2 class="history-title">Lịch Sử Ăn Tháng Này</h2>
+      <div id="historyList" class="history-list"></div>
+      <p id="historyEmpty" class="field-hint history-empty" style="display: none;"></p>
+      <button type="button" id="backFromHistoryBtn" class="btn-secondary">&larr; QUAY LẠI</button>
     </div>
 
     <div id="loadErrorView" class="card error-card" style="display: none;">

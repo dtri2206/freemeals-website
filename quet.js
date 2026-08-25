@@ -8,14 +8,19 @@ const params = new URLSearchParams(window.location.search);
 const memberCode = params.get("kh");
 
 const memberConfirmView = document.getElementById("memberConfirmView");
+const historyView = document.getElementById("historyView");
 const loadErrorView = document.getElementById("loadErrorView");
 const loadErrorText = document.getElementById("loadErrorText");
 const resultSuccessView = document.getElementById("resultSuccessView");
 const resultErrorView = document.getElementById("resultErrorView");
 
-const confirmDateTime = document.getElementById("confirmDateTime");
-const confirmMemberName = document.getElementById("confirmMemberName");
+const remainingHero = document.getElementById("remainingHero");
 const confirmRemaining = document.getElementById("confirmRemaining");
+
+const viewHistoryBtn = document.getElementById("viewHistoryBtn");
+const backFromHistoryBtn = document.getElementById("backFromHistoryBtn");
+const historyList = document.getElementById("historyList");
+const historyEmpty = document.getElementById("historyEmpty");
 
 const quanPasswordInput = document.getElementById("quanPassword");
 const togglePasswordBtn = document.getElementById("togglePasswordBtn");
@@ -29,7 +34,7 @@ const tryAgainBtn = document.getElementById("tryAgainBtn");
 let currentMember = null;
 
 function showView(viewEl) {
-  [memberConfirmView, loadErrorView, resultSuccessView, resultErrorView].forEach((v) => {
+  [memberConfirmView, historyView, loadErrorView, resultSuccessView, resultErrorView].forEach((v) => {
     v.style.display = v === viewEl ? "block" : "none";
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -76,16 +81,16 @@ async function init() {
 init();
 
 function showMemberConfirm() {
-  confirmDateTime.textContent = new Date().toLocaleString("vi-VN");
-  confirmMemberName.textContent = currentMember.name;
-  confirmRemaining.textContent = currentMember.remaining + " suất";
+  confirmRemaining.textContent = currentMember.remaining;
 
   passwordError.textContent = "";
 
   if (currentMember.remaining < 1) {
+    remainingHero.classList.add("empty");
     confirmSubmitBtn.disabled = true;
     passwordError.textContent = "Khách đã dùng hết suất ăn tháng này.";
   } else {
+    remainingHero.classList.remove("empty");
     confirmSubmitBtn.disabled = false;
   }
 
@@ -101,6 +106,48 @@ togglePasswordBtn.addEventListener("click", () => {
   const isHidden = quanPasswordInput.type === "password";
   quanPasswordInput.type = isHidden ? "text" : "password";
   togglePasswordBtn.textContent = isHidden ? "\u{1F513}" : "\u{1F512}";
+});
+
+viewHistoryBtn.addEventListener("click", async () => {
+  historyList.innerHTML = "";
+  historyEmpty.style.display = "none";
+  showView(historyView);
+
+  try {
+    const url = GOOGLE_SCRIPT_URL + "?action=history&code=" + encodeURIComponent(currentMember.code) + "&_=" + Date.now();
+    const response = await fetchWithRetry(url, { cache: "no-store" });
+    const result = await response.json();
+
+    if (result.result === "success" && result.history && result.history.length > 0) {
+      result.history.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "history-item";
+
+        const dateEl = document.createElement("div");
+        dateEl.className = "history-date";
+        dateEl.textContent = item.date;
+
+        const locEl = document.createElement("div");
+        locEl.className = "history-location";
+        locEl.textContent = item.locationName;
+
+        row.appendChild(dateEl);
+        row.appendChild(locEl);
+        historyList.appendChild(row);
+      });
+    } else {
+      historyEmpty.textContent = "Chưa có lượt ăn nào trong tháng này.";
+      historyEmpty.style.display = "block";
+    }
+  } catch (err) {
+    console.error(err);
+    historyEmpty.textContent = "Lỗi kết nối mạng, vui lòng thử lại.";
+    historyEmpty.style.display = "block";
+  }
+});
+
+backFromHistoryBtn.addEventListener("click", () => {
+  showView(memberConfirmView);
 });
 
 confirmSubmitBtn.addEventListener("click", async () => {

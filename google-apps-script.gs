@@ -119,6 +119,10 @@ function doGet(e) {
       return jsonResponse(getMemberInfo(e.parameter.code));
     }
 
+    if (action === "history") {
+      return jsonResponse({ result: "success", history: getMemberHistory(e.parameter.code) });
+    }
+
     var rows = getCachedRows("Quán Ăn", "quanAnRows");
     var locations = [];
 
@@ -137,6 +141,33 @@ function doGet(e) {
   } catch (error) {
     return jsonResponse({ result: "error", message: error.toString() });
   }
+}
+
+function getMemberHistory(code) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
+  var rows = sheet.getDataRange().getValues();
+  var tz = Session.getScriptTimeZone();
+  var thisMonthStr = Utilities.formatDate(new Date(), tz, "yyyy-MM");
+  var history = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var rowDate = toDateSafe(rows[i][0]);
+    if (!rowDate) continue;
+    if (Utilities.formatDate(rowDate, tz, "yyyy-MM") !== thisMonthStr) continue;
+    if (String(rows[i][1] || "").trim() !== String(code).trim()) continue;
+
+    history.push({
+      timestamp: rowDate.getTime(),
+      date: Utilities.formatDate(rowDate, tz, "dd/MM/yyyy HH:mm"),
+      locationName: String(rows[i][4] || "").trim()
+    });
+  }
+
+  history.sort(function (a, b) { return b.timestamp - a.timestamp; });
+
+  return history.map(function (item) {
+    return { date: item.date, locationName: item.locationName };
+  });
 }
 
 function getMemberInfo(code) {
