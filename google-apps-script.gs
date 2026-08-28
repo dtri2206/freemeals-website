@@ -203,7 +203,8 @@ function handleRegistration(data) {
     if (!location) {
       return jsonResponse({ result: "error", message: "Khong tim thay quan an." });
     }
-    if (!data.password || data.password !== location.password) {
+    var password = String(data.password || "").trim();
+    if (!password || password !== location.password) {
       return jsonResponse({ result: "error", message: "Mat khau khong dung." });
     }
 
@@ -232,11 +233,12 @@ function handleCheckin(data) {
   }
 
   try {
-    if (!data.password) {
+    var password = String(data.password || "").trim();
+    if (!password) {
       return jsonResponse({ result: "error", message: "Chua nhap mat khau." });
     }
 
-    var location = findLocationByPassword(data.password);
+    var location = findLocationByPassword(password);
     if (!location) {
       return jsonResponse({ result: "error", message: "Mat khau khong dung." });
     }
