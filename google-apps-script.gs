@@ -1,65 +1,9 @@
+var TIMEZONE = "Asia/Ho_Chi_Minh";
+
 function jsonResponse(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
-}
-
-function getCachedRows(sheetName, cacheKey) {
-  var cache = CacheService.getScriptCache();
-  var cached = cache.get(cacheKey);
-  if (cached) return JSON.parse(cached);
-
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-  var rows = sheet.getDataRange().getValues();
-  cache.put(cacheKey, JSON.stringify(rows), 60);
-  return rows;
-}
-
-function findLocationByCode(code) {
-  var rows = getCachedRows("Quán Ăn", "quanAnRows");
-
-  for (var i = 1; i < rows.length; i++) {
-    var rowCode = String(rows[i][0] || "").trim();
-    if (rowCode && rowCode === code) {
-      return {
-        name: String(rows[i][1] || "").trim(),
-        password: String(rows[i][3] || "").trim(),
-        monthlyLimit: Number(rows[i][4]) || 0
-      };
-    }
-  }
-  return null;
-}
-
-function findLocationByPassword(password) {
-  var rows = getCachedRows("Quán Ăn", "quanAnRows");
-
-  for (var i = 1; i < rows.length; i++) {
-    var rowPassword = String(rows[i][3] || "").trim();
-    if (rowPassword && rowPassword === password) {
-      return {
-        code: String(rows[i][0] || "").trim(),
-        name: String(rows[i][1] || "").trim(),
-        monthlyLimit: Number(rows[i][4]) || 0
-      };
-    }
-  }
-  return null;
-}
-
-function findMemberByCode(code) {
-  var rows = getCachedRows("Thành Viên", "thanhVienRows");
-
-  for (var i = 1; i < rows.length; i++) {
-    var rowCode = String(rows[i][0] || "").trim();
-    if (rowCode && rowCode === code) {
-      return {
-        name: String(rows[i][1] || "").trim(),
-        allowance: Number(rows[i][3]) || 0
-      };
-    }
-  }
-  return null;
 }
 
 function toDateSafe(value) {
@@ -73,42 +17,87 @@ function toDateSafe(value) {
   return null;
 }
 
-function getThisMonthSum(matchColumnIndex, matchValue) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
-  var rows = sheet.getDataRange().getValues();
-  var tz = Session.getScriptTimeZone();
-  var thisMonthStr = Utilities.formatDate(new Date(), tz, "yyyy-MM");
-  var sum = 0;
-
-  for (var i = 1; i < rows.length; i++) {
-    var rowDate = toDateSafe(rows[i][0]);
-    if (!rowDate) continue;
-    if (Utilities.formatDate(rowDate, tz, "yyyy-MM") !== thisMonthStr) continue;
-    if (String(rows[i][matchColumnIndex] || "").trim() === String(matchValue).trim()) {
-      sum += Number(rows[i][5]) || 0;
-    }
-  }
-  return sum;
+function toTimestamp(value) {
+  var d = toDateSafe(value);
+  return d ? d.getTime() : null;
 }
 
-function getThisMonthSumsForCheckin(memberCode, quanCode) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
-  var rows = sheet.getDataRange().getValues();
-  var tz = Session.getScriptTimeZone();
-  var thisMonthStr = Utilities.formatDate(new Date(), tz, "yyyy-MM");
-  var memberSum = 0;
-  var quanSum = 0;
+function getMonthTimeRange() {
+  var now = new Date();
+  var start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
+  var end = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
+  return { start: start, end: end };
+}
 
-  for (var i = 1; i < rows.length; i++) {
-    var rowDate = toDateSafe(rows[i][0]);
-    if (!rowDate) continue;
-    if (Utilities.formatDate(rowDate, tz, "yyyy-MM") !== thisMonthStr) continue;
-    var suat = Number(rows[i][5]) || 0;
-    if (String(rows[i][1] || "").trim() === memberCode) memberSum += suat;
-    if (quanCode && String(rows[i][3] || "").trim() === quanCode) quanSum += suat;
+function cachePutSafe(cache, key, obj) {
+  try {
+    var str = JSON.stringify(obj);
+    var byteLength = Utilities.newBlob(str).getBytes().length;
+    if (byteLength < 90000) {
+      cache.put(key, str, 60);
+    }
+  } catch (e) {
+    // Bo qua loi cache, lan doc sau se doc lai tu Sheet
+  }
+}
+
+function getLocationsData() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get("locations_data_v2");
+  if (cached) {
+    try { return JSON.parse(cached); } catch (e) {}
   }
 
-  return { memberSum: memberSum, quanSum: quanSum };
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Quán Ăn");
+  var rows = sheet.getDataRange().getValues();
+
+  var byCode = {};
+  var byPassword = {};
+  var list = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var code = String(rows[i][0] || "").trim();
+    if (!code) continue;
+
+    var item = {
+      code: code,
+      name: String(rows[i][1] || "").trim(),
+      password: String(rows[i][3] || "").trim(),
+      monthlyLimit: Number(rows[i][4]) || 0
+    };
+
+    byCode[code] = item;
+    if (item.password) byPassword[item.password] = item;
+    list.push({ code: item.code, name: item.name });
+  }
+
+  var data = { byCode: byCode, byPassword: byPassword, list: list };
+  cachePutSafe(cache, "locations_data_v2", data);
+  return data;
+}
+
+function getMembersMap() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get("members_map_v2");
+  if (cached) {
+    try { return JSON.parse(cached); } catch (e) {}
+  }
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Thành Viên");
+  var rows = sheet.getDataRange().getValues();
+  var byCode = {};
+
+  for (var i = 1; i < rows.length; i++) {
+    var code = String(rows[i][0] || "").trim();
+    if (!code) continue;
+    byCode[code] = {
+      name: String(rows[i][1] || "").trim(),
+      allowance: Number(rows[i][3]) || 0
+    };
+  }
+
+  cachePutSafe(cache, "members_map_v2", byCode);
+  return byCode;
 }
 
 function doGet(e) {
@@ -123,59 +112,34 @@ function doGet(e) {
       return jsonResponse({ result: "success", history: getMemberHistory(e.parameter.code) });
     }
 
-    var rows = getCachedRows("Quán Ăn", "quanAnRows");
-    var locations = [];
-
-    for (var i = 1; i < rows.length; i++) {
-      var code = String(rows[i][0] || "").trim();
-      if (code) {
-        locations.push({
-          code: code,
-          name: String(rows[i][1] || "").trim()
-        });
-      }
-    }
-
-    return jsonResponse({ result: "success", locations: locations });
+    var locations = getLocationsData();
+    return jsonResponse({ result: "success", locations: locations.list });
 
   } catch (error) {
     return jsonResponse({ result: "error", message: error.toString() });
   }
 }
 
-function getMemberHistory(code) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
-  var rows = sheet.getDataRange().getValues();
-  var tz = Session.getScriptTimeZone();
-  var thisMonthStr = Utilities.formatDate(new Date(), tz, "yyyy-MM");
-  var history = [];
-
-  for (var i = 1; i < rows.length; i++) {
-    var rowDate = toDateSafe(rows[i][0]);
-    if (!rowDate) continue;
-    if (Utilities.formatDate(rowDate, tz, "yyyy-MM") !== thisMonthStr) continue;
-    if (String(rows[i][1] || "").trim() !== String(code).trim()) continue;
-
-    history.push({
-      timestamp: rowDate.getTime(),
-      date: Utilities.formatDate(rowDate, tz, "dd/MM/yyyy HH:mm"),
-      locationName: String(rows[i][4] || "").trim()
-    });
-  }
-
-  history.sort(function (a, b) { return b.timestamp - a.timestamp; });
-
-  return history.map(function (item) {
-    return { date: item.date, locationName: item.locationName };
-  });
-}
-
 function getMemberInfo(code) {
-  var member = findMemberByCode(code);
+  var members = getMembersMap();
+  var member = members[code];
   if (!member) {
     return { result: "error", message: "Khong tim thay ma khach nay." };
   }
-  var usedThisMonth = getThisMonthSum(1, code);
+
+  var range = getMonthTimeRange();
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
+  var rows = sheet.getDataRange().getValues();
+  var usedThisMonth = 0;
+
+  for (var i = 1; i < rows.length; i++) {
+    var t = toTimestamp(rows[i][0]);
+    if (t === null || t < range.start || t >= range.end) continue;
+    if (String(rows[i][1] || "").trim() === code) {
+      usedThisMonth += Number(rows[i][5]) || 0;
+    }
+  }
+
   return {
     result: "success",
     member: {
@@ -186,6 +150,33 @@ function getMemberInfo(code) {
       remaining: Math.max(0, member.allowance - usedThisMonth)
     }
   };
+}
+
+function getMemberHistory(code) {
+  var range = getMonthTimeRange();
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
+  var rows = sheet.getDataRange().getValues();
+  var history = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var t = toTimestamp(rows[i][0]);
+    if (t === null || t < range.start || t >= range.end) continue;
+    if (String(rows[i][1] || "").trim() !== String(code).trim()) continue;
+
+    history.push({
+      timestamp: t,
+      locationName: String(rows[i][4] || "").trim()
+    });
+  }
+
+  history.sort(function (a, b) { return b.timestamp - a.timestamp; });
+
+  return history.map(function (item) {
+    return {
+      date: Utilities.formatDate(new Date(item.timestamp), TIMEZONE, "dd/MM/yyyy HH:mm"),
+      locationName: item.locationName
+    };
+  });
 }
 
 function doPost(e) {
@@ -199,10 +190,12 @@ function doPost(e) {
 
 function handleRegistration(data) {
   try {
-    var location = findLocationByCode(data.locationCode);
+    var locations = getLocationsData();
+    var location = locations.byCode[data.locationCode];
     if (!location) {
       return jsonResponse({ result: "error", message: "Khong tim thay quan an." });
     }
+
     var password = String(data.password || "").trim();
     if (!password || password !== location.password) {
       return jsonResponse({ result: "error", message: "Mat khau khong dung." });
@@ -225,6 +218,23 @@ function handleRegistration(data) {
 }
 
 function handleCheckin(data) {
+  var password = String(data.password || "").trim();
+  if (!password) {
+    return jsonResponse({ result: "error", message: "Chua nhap mat khau." });
+  }
+
+  var locations = getLocationsData();
+  var location = locations.byPassword[password];
+  if (!location) {
+    return jsonResponse({ result: "error", message: "Mat khau khong dung." });
+  }
+
+  var members = getMembersMap();
+  var member = members[data.memberCode];
+  if (!member) {
+    return jsonResponse({ result: "error", message: "Khong tim thay ma khach nay." });
+  }
+
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
@@ -233,42 +243,37 @@ function handleCheckin(data) {
   }
 
   try {
-    var password = String(data.password || "").trim();
-    if (!password) {
-      return jsonResponse({ result: "error", message: "Chua nhap mat khau." });
-    }
-
-    var location = findLocationByPassword(password);
-    if (!location) {
-      return jsonResponse({ result: "error", message: "Mat khau khong dung." });
-    }
-
-    var member = findMemberByCode(data.memberCode);
-    if (!member) {
-      return jsonResponse({ result: "error", message: "Khong tim thay ma khach nay." });
-    }
-
+    var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
+    var rows = logSheet.getDataRange().getValues();
+    var range = getMonthTimeRange();
+    var memberSum = 0;
+    var quanSum = 0;
     var portions = 1;
 
-    var sums = getThisMonthSumsForCheckin(data.memberCode, location.code);
+    for (var i = 1; i < rows.length; i++) {
+      var t = toTimestamp(rows[i][0]);
+      if (t === null || t < range.start || t >= range.end) continue;
+      var suat = Number(rows[i][5]) || 0;
+      if (String(rows[i][1] || "").trim() === data.memberCode) memberSum += suat;
+      if (String(rows[i][3] || "").trim() === location.code) quanSum += suat;
+    }
 
-    if (sums.memberSum + portions > member.allowance) {
+    if (memberSum + portions > member.allowance) {
       return jsonResponse({
         result: "error",
-        message: "Khach da dung " + sums.memberSum + "/" + member.allowance +
+        message: "Khach da dung " + memberSum + "/" + member.allowance +
           " suat thang nay, khong the nhan them suat."
       });
     }
 
-    if (location.monthlyLimit > 0 && sums.quanSum + portions > location.monthlyLimit) {
+    if (location.monthlyLimit > 0 && quanSum + portions > location.monthlyLimit) {
       return jsonResponse({
         result: "error",
-        message: "Quan da ban " + sums.quanSum + "/" + location.monthlyLimit +
+        message: "Quan da ban " + quanSum + "/" + location.monthlyLimit +
           " suat thang nay, khong the ban them suat."
       });
     }
 
-    var logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Lịch Sử Ăn");
     logSheet.appendRow([
       new Date(),
       data.memberCode,
@@ -282,7 +287,7 @@ function handleCheckin(data) {
       result: "success",
       memberName: member.name,
       locationName: location.name,
-      memberRemaining: member.allowance - (sums.memberSum + portions)
+      memberRemaining: member.allowance - (memberSum + portions)
     });
 
   } catch (error) {
