@@ -1,6 +1,11 @@
 "use strict";
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySYWfz3_iIjoGyQylUkTS0MTKKxI2XSXW1KPUkxqv7cfYH_v1aWAs-PY2LLH9hX9bF/exec";
+// ===== Supabase (Giai đoạn 3 — trang quét đọc/ghi trực tiếp trên Supabase) =====
+// URL + anon key là công khai, an toàn khi để lộ trong file này (giống GOOGLE_SCRIPT_URL trước đây).
+// Mọi thao tác đi qua 3 RPC: get_member_info, get_member_history, checkin.
+const SUPABASE_URL = "https://dqgjnqeqwsijnsphpzqt.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZ2pucWVxd3Npam5zcGhwenF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjUzNTEsImV4cCI6MjEwMzUwMTM1MX0.eJpR_qUIGLfZHylI5yoIngAtUr0qYpKLpHH9oKPIhZ4";
 
 const PASSWORD_STORAGE_KEY = "quet_last_password";
 
@@ -51,6 +56,47 @@ async function fetchWithRetry(url, options, retries = 3, delayMs = 1500) {
   }
 }
 
+/**
+ * Gọi 1 RPC Supabase qua PostgREST. Trả về JSON đã parse.
+ * Ném lỗi khi mạng hỏng hoặc HTTP != 2xx (để nhánh catch xử lý).
+ */
+async function callRpc(fnName, args) {
+  const response = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(args || {}),
+    cache: "no-store",
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    const msg = (data && (data.message || data.hint)) || `Lỗi máy chủ (${response.status}).`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+/** ISO timestamp -> "dd/MM/yyyy HH:mm" theo giờ Việt Nam. */
+function formatDateTimeVN(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
 async function init() {
   if (!memberCode) {
     loadErrorText.textContent = "Link này thiếu mã khách. Vui lòng nhờ khách đưa đúng thẻ QR để quét lại.";
@@ -59,17 +105,16 @@ async function init() {
   }
 
   try {
-    const url = GOOGLE_SCRIPT_URL + "?action=member&code=" + encodeURIComponent(memberCode) + "&_=" + Date.now();
-    const response = await fetchWithRetry(url, { cache: "no-store" });
-    const result = await response.json();
+    // get_member_info trả về mảng: [] nếu không có/đã ngưng, hoặc [{ code, name, allowance, used_this_month, remaining }]
+    const rows = await callRpc("get_member_info", { p_code: memberCode });
 
-    if (result.result !== "success") {
-      loadErrorText.textContent = result.message || "Không tìm thấy khách này.";
+    if (!Array.isArray(rows) || rows.length === 0) {
+      loadErrorText.textContent = "Không tìm thấy khách này (hoặc thẻ đã ngưng sử dụng).";
       showView(loadErrorView);
       return;
     }
 
-    currentMember = result.member;
+    currentMember = rows[0];
     showMemberConfirm();
   } catch (err) {
     console.error(err);
@@ -114,22 +159,22 @@ viewHistoryBtn.addEventListener("click", async () => {
   showView(historyView);
 
   try {
-    const url = GOOGLE_SCRIPT_URL + "?action=history&code=" + encodeURIComponent(currentMember.code) + "&_=" + Date.now();
-    const response = await fetchWithRetry(url, { cache: "no-store" });
-    const result = await response.json();
+    // get_member_history trả về mảng [{ id, location_name, portions, created_at }]
+    const rows = await callRpc("get_member_history", { p_code: currentMember.code });
 
-    if (result.result === "success" && result.history && result.history.length > 0) {
-      result.history.forEach((item) => {
+    if (Array.isArray(rows) && rows.length > 0) {
+      rows.forEach((item) => {
         const row = document.createElement("div");
         row.className = "history-item";
 
         const dateEl = document.createElement("div");
         dateEl.className = "history-date";
-        dateEl.textContent = item.date;
+        dateEl.textContent = formatDateTimeVN(item.created_at);
 
         const locEl = document.createElement("div");
         locEl.className = "history-location";
-        locEl.textContent = item.locationName;
+        locEl.textContent =
+          item.portions > 1 ? `${item.location_name} (${item.portions} suất)` : item.location_name;
 
         row.appendChild(dateEl);
         row.appendChild(locEl);
@@ -162,26 +207,21 @@ confirmSubmitBtn.addEventListener("click", async () => {
   confirmSubmitBtn.disabled = true;
 
   try {
-    const response = await fetchWithRetry(GOOGLE_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        action: "checkin",
-        memberCode: currentMember.code,
-        portions: 1,
-        password: password,
-      }),
+    // checkin trả về object { result: 'success' | 'error', ... }
+    const result = await callRpc("checkin", {
+      p_member_code: currentMember.code,
+      p_password: password,
+      p_portions: 1,
     });
-    const result = await response.json();
 
-    if (result.result === "success") {
+    if (result && result.result === "success") {
       localStorage.setItem(PASSWORD_STORAGE_KEY, password);
       resultSuccessText.textContent =
-        "Đã ghi nhận 1 suất ăn cho khách hàng " + result.memberName +
-        " tại quán " + result.locationName + ".";
+        "Đã ghi nhận " + result.portions + " suất ăn cho khách hàng " + result.member_name +
+        " tại quán " + result.location_name + ".";
       showView(resultSuccessView);
     } else {
-      passwordError.textContent = result.message || "Có lỗi xảy ra, vui lòng thử lại.";
+      passwordError.textContent = (result && result.message) || "Có lỗi xảy ra, vui lòng thử lại.";
       confirmSubmitBtn.disabled = false;
     }
   } catch (err) {
