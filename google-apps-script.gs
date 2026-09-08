@@ -219,12 +219,13 @@ function syncMembers_() {
   return syncTableToSupabase_(SUPABASE_MEMBERS_TABLE, records);
 }
 
-/** Tab "Quan An": A=Ma quan, B=Ten quan, D=Mat khau, E=Gioi han suat/thang. */
+/** Tab "Quan An": A=Ma quan, B=Ten quan, C=Link QR dang ky thanh vien, D=Mat khau, E=Gioi han suat/thang. */
 function syncLocations_() {
   var records = readSheetRows_("Quán Ăn").map(function (r) {
     return {
       code: String(r[0]).trim(),
       name: String(r[1] || "").trim(),
+      signup_qr_url: String(r[2] || "").trim() || null,
       password: String(r[3] || "").trim(),
       monthly_limit: Number(r[4]) || 0,
       is_active: true

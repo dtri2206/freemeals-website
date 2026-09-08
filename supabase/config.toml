@@ -384,6 +384,15 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# "misaigon" is the app-facing API (memberInfo/mealHistory/checkin) used by
+# the Mi Sài Gòn mobile app. verify_jwt = true (the safe default): every
+# call needs `Authorization: Bearer <anon key>` -- the SAME anon key
+# already hardcoded (public-safe) in quet.js. This just stops the endpoint
+# from being callable by literally anyone with no key at all; checkin()
+# still enforces its own password check and IP rate limit on top.
+[functions.misaigon]
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327
