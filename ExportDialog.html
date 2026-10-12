@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<!--
+  Hop thoai "Xuat bao cao theo quan" -- chay BEN TRONG Google Sheet (Apps Script
+  HtmlService), khong phai trang web cong khai. Trong Apps Script, file nay phai
+  dat ten dung la "ExportDialog". Xem README muc 10.
+-->
+<style>
+  :root { --primary: #1565C0; --primary-soft: #E3F2FD; --line: #dadce0; --muted: #5f6368; --err: #c5221f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 4px 2px 0; font: 14px/1.45 Roboto, Arial, sans-serif; color: #202124; }
+  h3 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin: 18px 0 8px; }
+  h3:first-child { margin-top: 0; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 16px; padding: 6px 14px; font: inherit; cursor: pointer; }
+  .chip:hover { background: #f1f3f4; }
+  .chip.on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 500; }
+
+  .dates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .dates label { display: block; font-size: 12px; color: var(--muted); }
+  .dates input { display: block; width: 100%; margin-top: 4px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+  .dates input:focus { outline: 2px solid var(--primary); outline-offset: -1px; border-color: transparent; }
+
+  .locs-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .locs-head a { color: var(--primary); cursor: pointer; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; text-decoration: none; margin-left: 12px; }
+  #locs { border: 1px solid var(--line); border-radius: 6px; max-height: 210px; overflow-y: auto; }
+  #locs label { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-top: 1px solid #f1f3f4; cursor: pointer; }
+  #locs label:first-child { border-top: 0; }
+  #locs label:hover { background: #f8f9fa; }
+  #locs input { margin-top: 3px; accent-color: var(--primary); }
+  #locs .code { color: var(--muted); font-size: 12px; }
+  #locs .off { color: var(--muted); font-style: italic; }
+  .placeholder { padding: 12px; color: var(--muted); }
+
+  .err { color: var(--err); min-height: 20px; margin-top: 10px; font-size: 13px; }
+
+  .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  button.btn { border-radius: 6px; padding: 9px 18px; font: inherit; font-weight: 500; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--primary); }
+  button.btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  button.btn:disabled { opacity: .55; cursor: default; }
+
+  .busy { text-align: center; padding: 70px 10px; color: var(--muted); }
+  .spinner { width: 30px; height: 30px; margin: 0 auto 16px; border: 3px solid var(--primary-soft); border-top-color: var(--primary); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .folder { display: block; padding: 12px 14px; border-radius: 6px; background: var(--primary-soft); color: var(--primary); text-decoration: none; font-weight: 500; margin-bottom: 12px; }
+  .file { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 2px; border-top: 1px solid #f1f3f4; }
+  .file:first-of-type { border-top: 0; }
+  .file .meta { color: var(--muted); font-size: 12px; }
+  .file a { color: var(--primary); font-weight: 500; text-decoration: none; white-space: nowrap; }
+  .file.empty { color: var(--muted); }
+  #files { max-height: 330px; overflow-y: auto; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<section id="form">
+  <h3>Khoảng ngày</h3>
+  <div class="chips">
+    <button type="button" class="chip" data-range="thisMonth">Tháng này</button>
+    <button type="button" class="chip" data-range="lastMonth">Tháng trước</button>
+    <button type="button" class="chip" data-range="last7">7 ngày qua</button>
+  </div>
+  <div class="dates">
+    <label>Từ ngày<input type="date" id="from"></label>
+    <label>Đến ngày<input type="date" id="to"></label>
+  </div>
+
+  <h3 class="locs-head"><span>Quán — mỗi quán 1 file</span><span><a id="all">Chọn tất cả</a><a id="none">Bỏ chọn</a></span></h3>
+  <div id="locs"><div class="placeholder">Đang tải danh sách quán…</div></div>
+
+  <div class="err" id="err"></div>
+  <div class="actions">
+    <button type="button" class="btn" onclick="google.script.host.close()">Huỷ</button>
+    <button type="button" class="btn primary" id="go" disabled>Xuất file</button>
+  </div>
+</section>
+
+<section id="busy" class="busy" hidden>
+  <div class="spinner"></div>
+  <div id="busyText">Đang tạo file…</div>
+</section>
+
+<section id="done" hidden>
+  <h3 id="doneTitle"></h3>
+  <a class="folder" id="folderLink" target="_blank"></a>
+  <div id="files"></div>
+  <div class="actions">
+    <button type="button" class="btn" id="again">Xuất lần khác</button>
+    <button type="button" class="btn primary" onclick="google.script.host.close()">Đóng</button>
+  </div>
+</section>
+
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var today = null;
+
+  // --- Ngay: tinh tu chuoi "yyyy-mm-dd" cua server (gio VN), dung UTC de khong
+  //     bi lech ngay theo mui gio cua may nguoi dung.
+  function iso(y, m, d) { return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10); }
+  function ranges() {
+    var p = today.split("-").map(Number), y = p[0], m = p[1] - 1, d = p[2];
+    return {
+      thisMonth: [iso(y, m, 1), today],
+      lastMonth: [iso(y, m - 1, 1), iso(y, m, 0)],
+      last7:     [iso(y, m, d - 6), today]
+    };
+  }
+  function pickRange(key) {
+    if (!today) return; // chua tai xong ngay hom nay tu server
+    var r = ranges()[key];
+    $("from").value = r[0];
+    $("to").value = r[1];
+    markChip(key);
+  }
+  function markChip(key) {
+    document.querySelectorAll(".chip").forEach(function (c) {
+      c.classList.toggle("on", c.dataset.range === key);
+    });
+  }
+  document.querySelectorAll(".chip").forEach(function (c) {
+    c.addEventListener("click", function () { pickRange(c.dataset.range); });
+  });
+  ["from", "to"].forEach(function (id) {
+    $(id).addEventListener("input", function () { markChip(null); });
+  });
+
+  // --- Danh sach quan
+  function renderLocations(list) {
+    var box = $("locs");
+    box.innerHTML = "";
+    if (!list.length) {
+      box.innerHTML = '<div class="placeholder">Chưa có quán nào trên hệ thống.</div>';
+      return;
+    }
+    list.forEach(function (l) {
+      var label = document.createElement("label");
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = l.code;
+      cb.checked = l.is_active;
+      var text = document.createElement("span");
+      var name = document.createElement("div");
+      name.textContent = l.name;
+      if (!l.is_active) name.className = "off";
+      var code = document.createElement("div");
+      code.className = "code";
+      code.textContent = l.code + (l.is_active ? "" : " · đã ngưng");
+      text.appendChild(name);
+      text.appendChild(code);
+      label.appendChild(cb);
+      label.appendChild(text);
+      box.appendChild(label);
+    });
+  }
+  function setAll(on) {
+    document.querySelectorAll("#locs input").forEach(function (cb) { cb.checked = on; });
+  }
+  $("all").addEventListener("click", function () { setAll(true); });
+  $("none").addEventListener("click", function () { setAll(false); });
+
+  // --- Xuat
+  function show(id) {
+    ["form", "busy", "done"].forEach(function (s) { $(s).hidden = s !== id; });
+  }
+  function fail(err) {
+    show("form");
+    $("err").textContent = "Lỗi: " + (err && err.message ? err.message : err);
+  }
+
+  $("go").addEventListener("click", function () {
+    $("err").textContent = "";
+    var from = $("from").value, to = $("to").value;
+    var codes = Array.prototype.map.call(
+      document.querySelectorAll("#locs input:checked"), function (cb) { return cb.value; }
+    );
+    if (!from || !to) return fail("Chọn đủ \"Từ ngày\" và \"Đến ngày\".");
+    if (from > to) return fail("\"Từ ngày\" phải trước hoặc bằng \"Đến ngày\".");
+    if (!codes.length) return fail("Chọn ít nhất 1 quán.");
+
+    $("busyText").textContent = "Đang tạo " + codes.length + " file… (vài giây mỗi quán)";
+    show("busy");
+    google.script.run
+      .withSuccessHandler(renderDone)
+      .withFailureHandler(fail)
+      .exportReportsByLocation({ from: from, to: to, codes: codes });
+  });
+
+  function renderDone(res) {
+    var made = res.files.filter(function (f) { return f.url; });
+    $("doneTitle").textContent = made.length
+      ? "Xong — đã tạo " + made.length + " file"
+      : "Không có suất ăn nào trong khoảng ngày này";
+    $("folderLink").hidden = !res.folderUrl;
+    if (res.folderUrl) {
+      $("folderLink").href = res.folderUrl;
+      $("folderLink").textContent = "📁 " + res.folderName;
+    }
+    var box = $("files");
+    box.innerHTML = "";
+    // Quan co file len truoc, quan trong xuong duoi.
+    made.concat(res.files.filter(function (f) { return !f.url; })).forEach(function (f) {
+      var row = document.createElement("div");
+      row.className = "file";
+      var info = document.createElement("div");
+      var name = document.createElement("div");
+      name.textContent = f.name;
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = f.url
+        ? f.portions + " suất · " + f.rows + " dòng · " + f.days + " ngày có ăn"
+        : "Không có suất ăn — không tạo file";
+      info.appendChild(name);
+      info.appendChild(meta);
+      row.appendChild(info);
+      if (f.url) {
+        var a = document.createElement("a");
+        a.href = f.url;
+        a.target = "_blank";
+        a.textContent = "Mở ↗";
+        row.appendChild(a);
+      } else {
+        row.classList.add("empty");
+      }
+      box.appendChild(row);
+    });
+    show("done");
+  }
+  $("again").addEventListener("click", function () { show("form"); });
+
+  // --- Khoi tao
+  google.script.run
+    .withSuccessHandler(function (init) {
+      today = init.today;
+      // Khong de len ngay nguoi dung da tu chon trong luc cho tai.
+      if (!$("from").value && !$("to").value) pickRange("thisMonth");
+      renderLocations(init.locations || []);
+      $("go").disabled = false;
+    })
+    .withFailureHandler(function (err) {
+      $("locs").innerHTML = "";
+      fail(err);
+    })
+    .getExportInit();
+</script>
+</body>
+</html>
