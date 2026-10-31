@@ -84,13 +84,18 @@ function handleRegistration(data) {
     }
 
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Khách Ăn");
-    sheet.appendRow([
+    var row = sheet.getLastRow() + 1;
+    // Dinh dang cot SDT (cot B) thanh Plain Text TRUOC khi ghi gia tri --
+    // neu khong, Google Sheets tu nhan dien chuoi so va bo mat so 0 dau
+    // (vd "0901234567" thanh 901234567) giong nhu go tay vao Sheet.
+    sheet.getRange(row, 2).setNumberFormat("@");
+    sheet.getRange(row, 1, 1, 5).setValues([[
       data.fullName,
       data.phone,
       data.location,
       "",
       new Date()
-    ]);
+    ]]);
 
     return jsonResponse({ result: "success" });
 
