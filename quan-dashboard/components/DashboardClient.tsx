@@ -59,7 +59,7 @@ export default function DashboardClient({
                 : "border-transparent text-[var(--color-text-muted)]"
             }`}
           >
-            Theo dõi 24h
+            Theo dõi hôm nay
           </button>
           <button
             onClick={() => setTab("report")}

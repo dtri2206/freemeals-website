@@ -71,7 +71,7 @@ export default function CasualMealsCard({
       <div className="px-4 py-3 border-b border-[var(--color-border)]">
         <h3 className="font-bold">Suất ăn vãng lai — khách mới đăng ký</h3>
         <p className="text-sm text-[var(--color-text-muted)]">
-          Chương trình khuyến mãi đăng ký, {rows.length} suất trong 24 giờ qua
+          Chương trình khuyến mãi đăng ký, {rows.length} suất hôm nay
         </p>
       </div>
       <div className="divide-y divide-[var(--color-border)]">

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { serviceSelect } from "@/lib/supabaseServer";
+import { vnStartOfTodayIso } from "@/lib/vnTime";
 
 type CasualSignupRow = {
   full_name: string;
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest) {
     : null;
   const locationFilter = session.isAdmin ? requestedLocation : session.code;
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Tu 00:00 hom nay (gio VN), khong phai 24h truot -- xem lib/vnTime.ts.
+  const since = vnStartOfTodayIso();
   const query = [
     session.isAdmin && !locationFilter
       ? "select=full_name,phone,registered_at,locations(name)"

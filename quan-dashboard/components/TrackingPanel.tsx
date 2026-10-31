@@ -126,7 +126,7 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-success)] opacity-60" />
             <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--color-success)]" />
           </span>
-          <h2 className="text-lg font-bold">Suất ăn trong 24 giờ gần nhất</h2>
+          <h2 className="text-lg font-bold">Suất ăn hôm nay (từ 00:00)</h2>
         </div>
         <p className="text-sm text-[var(--color-text-muted)]">
           Tự động cập nhật mỗi {POLL_MS / 1000} giây
@@ -165,7 +165,7 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
         <p className="text-center text-[var(--color-text-muted)] py-8">Đang tải...</p>
       ) : state && state.rows.length === 0 ? (
         <p className="text-center text-[var(--color-text-muted)] py-8">
-          Chưa có khách nào quẹt suất ăn trong 24 giờ qua.
+          Hôm nay chưa có khách nào quẹt suất ăn.
         </p>
       ) : (
         <div className="bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.08)] divide-y divide-[var(--color-border)]">

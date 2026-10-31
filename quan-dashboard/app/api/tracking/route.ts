@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { serviceSelect } from "@/lib/supabaseServer";
+import { vnStartOfTodayIso } from "@/lib/vnTime";
 
 type MealLogRow = {
   id: number;
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest) {
     : null;
   const locationFilter = session.isAdmin ? requestedLocation : session.code;
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Tu 00:00 hom nay (gio VN), khong phai 24h truot -- xem lib/vnTime.ts.
+  const since = vnStartOfTodayIso();
 
   // Che do "tat ca quan" (admin, khong chon quan cu the): embed them ten
   // quan (locations(name)) de phan biet dong nao cua quan nao.
