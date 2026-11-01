@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { serviceSelect } from "@/lib/supabaseServer";
-import { vnStartOfTodayIso } from "@/lib/vnTime";
+import { vnDayRange } from "@/lib/vnTime";
 
 type CasualSignupRow = {
   full_name: string;
@@ -27,14 +27,16 @@ export async function GET(request: NextRequest) {
     : null;
   const locationFilter = session.isAdmin ? requestedLocation : session.code;
 
-  // Tu 00:00 hom nay (gio VN), khong phai 24h truot -- xem lib/vnTime.ts.
-  const since = vnStartOfTodayIso();
+  // 1 ngay tron 00:00 -> 24:00 gio VN (?date=yyyy-MM-dd, bo trong = hom nay),
+  // khong phai 24h truot -- xem lib/vnTime.ts.
+  const { day, fromIso, toIso } = vnDayRange(new URL(request.url).searchParams.get("date"));
   const query = [
     session.isAdmin && !locationFilter
       ? "select=full_name,phone,registered_at,locations(name)"
       : "select=full_name,phone,registered_at",
     ...(locationFilter ? [`location_code=eq.${encodeURIComponent(locationFilter)}`] : []),
-    `registered_at=gte.${encodeURIComponent(since)}`,
+    `registered_at=gte.${encodeURIComponent(fromIso)}`,
+    `registered_at=lt.${encodeURIComponent(toIso)}`,
     "order=registered_at.desc",
     `limit=${session.isAdmin && !locationFilter ? 2000 : 500}`,
   ].join("&");
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
       registered_at: r.registered_at,
       location_name: r.locations?.name ?? null,
     }));
-    return NextResponse.json({ result: "success", rows, totalVisits: rows.length });
+    return NextResponse.json({ result: "success", day, rows, totalVisits: rows.length });
   } catch (err) {
     console.error("casual tracking error:", err);
     return NextResponse.json(

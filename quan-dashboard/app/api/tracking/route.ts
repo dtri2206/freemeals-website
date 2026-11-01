@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { serviceSelect } from "@/lib/supabaseServer";
-import { vnStartOfTodayIso } from "@/lib/vnTime";
+import { vnDayRange } from "@/lib/vnTime";
 
 type MealLogRow = {
   id: number;
@@ -27,8 +27,9 @@ export async function GET(request: NextRequest) {
     : null;
   const locationFilter = session.isAdmin ? requestedLocation : session.code;
 
-  // Tu 00:00 hom nay (gio VN), khong phai 24h truot -- xem lib/vnTime.ts.
-  const since = vnStartOfTodayIso();
+  // 1 ngay tron 00:00 -> 24:00 gio VN (?date=yyyy-MM-dd, bo trong = hom nay),
+  // khong phai 24h truot -- xem lib/vnTime.ts.
+  const { day, fromIso, toIso } = vnDayRange(new URL(request.url).searchParams.get("date"));
 
   // Che do "tat ca quan" (admin, khong chon quan cu the): embed them ten
   // quan (locations(name)) de phan biet dong nao cua quan nao.
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
       ? "select=id,member_code,member_name,portions,created_at,location_code,locations(name)"
       : "select=id,member_code,member_name,portions,created_at",
     ...(locationFilter ? [`location_code=eq.${encodeURIComponent(locationFilter)}`] : []),
-    `created_at=gte.${encodeURIComponent(since)}`,
+    `created_at=gte.${encodeURIComponent(fromIso)}`,
+    `created_at=lt.${encodeURIComponent(toIso)}`,
     "order=created_at.desc",
     `limit=${session.isAdmin && !locationFilter ? 2000 : 500}`,
   ].join("&");
@@ -55,6 +57,7 @@ export async function GET(request: NextRequest) {
     const totalPortions = rows.reduce((sum, r) => sum + r.portions, 0);
     return NextResponse.json({
       result: "success",
+      day,
       rows,
       totalPortions,
       totalVisits: rows.length,
