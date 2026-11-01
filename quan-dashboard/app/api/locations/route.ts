@@ -1,5 +1,5 @@
 // Chi admin dung: danh sach ma quan + ten quan de hien o o chon "Theo doi
-// 24h theo tung quan". Quan thuong khong goi API nay (khong can thay quan
+// theo ngay, theo tung quan". Quan thuong khong goi API nay (khong can thay quan
 // khac).
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
