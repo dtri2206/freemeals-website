@@ -2,7 +2,7 @@
 //  - anon key + RPC quan_login(): dùng để verify mã quán + mật khẩu (xem
 //    migration quan_login_rpc.sql) — RPC tự rate-limit theo IP, giống checkin().
 //  - service_role key (biến môi trường, không bao giờ gửi ra browser): dùng
-//    để đọc dữ liệu (tracking 24h, báo cáo) SAU KHI đã xác thực qua cookie
+//    để đọc dữ liệu (theo dõi theo ngày, báo cáo) SAU KHI đã xác thực qua cookie
 //    session — luôn tự lọc theo session.code ở phía server, không bao giờ
 //    tin mã quán do client gửi lên cho các API này.
 
