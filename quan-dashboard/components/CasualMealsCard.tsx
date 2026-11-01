@@ -1,7 +1,7 @@
 "use client";
 
 // TAM THOI (khuyen mai dang ky) -- bang suat an vang lai rieng, hien duoi
-// cung danh sach Theo doi 24h. Xoa file nay + app/api/casual/route.ts + phan
+// cung danh sach Theo doi theo ngay. Xoa file nay + app/api/casual/route.ts + phan
 // goi no trong TrackingPanel.tsx khi het dot khuyen mai.
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -28,10 +28,13 @@ export default function CasualMealsCard({
   onCountChange,
   isAdmin,
   locationFilter,
+  date,
 }: {
   onCountChange?: (count: number) => void;
   isAdmin?: boolean;
   locationFilter?: string;
+  /** "yyyy-MM-dd"; bo trong = hom nay. */
+  date?: string;
 }) {
   const [rows, setRows] = useState<CasualRow[] | null>(null);
   const fetchingRef = useRef(false);
@@ -40,10 +43,11 @@ export default function CasualMealsCard({
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     try {
-      const url =
-        isAdmin && locationFilter
-          ? `/api/casual?location=${encodeURIComponent(locationFilter)}`
-          : "/api/casual";
+      const params = new URLSearchParams();
+      if (isAdmin && locationFilter) params.set("location", locationFilter);
+      if (date) params.set("date", date);
+      const qs = params.toString();
+      const url = qs ? `/api/casual?${qs}` : "/api/casual";
       const res = await fetch(url, { cache: "no-store" });
       const data = await res.json();
       if (data.result === "success") {
@@ -55,7 +59,7 @@ export default function CasualMealsCard({
     } finally {
       fetchingRef.current = false;
     }
-  }, [onCountChange, isAdmin, locationFilter]);
+  }, [onCountChange, isAdmin, locationFilter, date]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -71,7 +75,7 @@ export default function CasualMealsCard({
       <div className="px-4 py-3 border-b border-[var(--color-border)]">
         <h3 className="font-bold">Suất ăn vãng lai — khách mới đăng ký</h3>
         <p className="text-sm text-[var(--color-text-muted)]">
-          Chương trình khuyến mãi đăng ký, {rows.length} suất trong 24 giờ qua
+          Chương trình khuyến mãi đăng ký, {rows.length} suất trong ngày
         </p>
       </div>
       <div className="divide-y divide-[var(--color-border)]">

@@ -13,6 +13,7 @@ type MealLogRow = {
 };
 
 type TrackingState = {
+  day: string;
   rows: MealLogRow[];
   totalPortions: number;
   totalVisits: number;
@@ -25,6 +26,17 @@ type LocationOption = {
 };
 
 const POLL_MS = 8000;
+
+/** "yyyy-MM-dd" -> "dd/MM/yyyy" */
+function formatDay(day: string) {
+  const [y, m, d] = day.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/** Ngay hom nay theo gio VN, dang "yyyy-MM-dd" (cho gioi han o chon ngay). */
+function vnTodayClient() {
+  return new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
 
 function formatTime(iso: string) {
   // Ep cung gio VN -- khong dung gio mac dinh cua thiet bi nguoi xem, tranh
@@ -52,6 +64,8 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
   // rong). Quan thuong khong goi /api/locations.
   const [locations, setLocations] = useState<LocationOption[] | null>(null);
   const [selectedLocation, setSelectedLocation] = useState("");
+  // "" = hom nay (server tu tinh theo gio VN, qua 00:00 tu sang ngay moi).
+  const [selectedDate, setSelectedDate] = useState("");
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -70,10 +84,11 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     try {
-      const url =
-        isAdmin && selectedLocation
-          ? `/api/tracking?location=${encodeURIComponent(selectedLocation)}`
-          : "/api/tracking";
+      const params = new URLSearchParams();
+      if (isAdmin && selectedLocation) params.set("location", selectedLocation);
+      if (selectedDate) params.set("date", selectedDate);
+      const qs = params.toString();
+      const url = qs ? `/api/tracking?${qs}` : "/api/tracking";
       const res = await fetch(url, { cache: "no-store" });
       const data = await res.json();
       if (data.result === "success") {
@@ -88,7 +103,7 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
       fetchingRef.current = false;
       setLoading(false);
     }
-  }, [isAdmin, selectedLocation]);
+  }, [isAdmin, selectedLocation, selectedDate]);
 
   useEffect(() => {
     // Poll ngay khi mount (hoac khi doi quan chon), roi lap lai moi POLL_MS --
@@ -100,8 +115,32 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
     return () => clearInterval(interval);
   }, [refresh]);
 
+  const isToday = !selectedDate || selectedDate === vnTodayClient();
+
   return (
     <div>
+      <div className="mb-4">
+        <label className="block text-sm font-semibold mb-1">Xem ngày</label>
+        <div className="flex gap-2">
+          <input
+            type="date"
+            value={selectedDate || vnTodayClient()}
+            max={vnTodayClient()}
+            onChange={(e) => setSelectedDate(e.target.value === vnTodayClient() ? "" : e.target.value)}
+            className="flex-1 px-3 py-2 border-2 border-[var(--color-border)] rounded-lg bg-white"
+          />
+          {!isToday && (
+            <button
+              type="button"
+              onClick={() => setSelectedDate("")}
+              className="px-3 py-2 rounded-lg border-2 border-[var(--color-primary)] text-[var(--color-primary)] font-semibold text-sm"
+            >
+              Hôm nay
+            </button>
+          )}
+        </div>
+      </div>
+
       {isAdmin && (
         <div className="mb-4">
           <label className="block text-sm font-semibold mb-1">Xem quán</label>
@@ -126,10 +165,13 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-success)] opacity-60" />
             <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--color-success)]" />
           </span>
-          <h2 className="text-lg font-bold">Suất ăn trong 24 giờ gần nhất</h2>
+          <h2 className="text-lg font-bold">
+            {isToday ? "Suất ăn hôm nay" : "Suất ăn ngày"}
+            {state && ` ${formatDay(state.day)}`}
+          </h2>
         </div>
         <p className="text-sm text-[var(--color-text-muted)]">
-          Tự động cập nhật mỗi {POLL_MS / 1000} giây
+          Tính từ 00:00 đến 24:00 · Tự động cập nhật mỗi {POLL_MS / 1000} giây
           {state && ` · cập nhật lúc ${formatTime(state.serverTime)}`}
         </p>
 
@@ -165,7 +207,7 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
         <p className="text-center text-[var(--color-text-muted)] py-8">Đang tải...</p>
       ) : state && state.rows.length === 0 ? (
         <p className="text-center text-[var(--color-text-muted)] py-8">
-          Chưa có khách nào quẹt suất ăn trong 24 giờ qua.
+          {isToday ? "Hôm nay chưa" : "Ngày này không"} có khách nào quẹt suất ăn.
         </p>
       ) : (
         <div className="bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.08)] divide-y divide-[var(--color-border)]">
@@ -197,6 +239,7 @@ export default function TrackingPanel({ isAdmin }: { isAdmin: boolean }) {
         onCountChange={setCasualCount}
         isAdmin={isAdmin}
         locationFilter={selectedLocation}
+        date={selectedDate}
       />
     </div>
   );
